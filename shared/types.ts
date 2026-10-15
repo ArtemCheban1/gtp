@@ -9,6 +9,8 @@ export type PhotoSlot = {
   src: string;
   /** Optional hint shown under the photo, e.g. "Hint: they drive on the left" */
   caption?: string;
+  /** Point of interest, 0..1 of the image width/height. Default centre (0.5, 0.5). */
+  focus?: {x: number; y: number};
 };
 
 export type Place = {

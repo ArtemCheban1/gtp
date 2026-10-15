@@ -96,7 +96,7 @@ export const Round: React.FC<Props> = ({video, round, fromView}) => {
           transform: `translateX(${(1 - enter) * 1100}px) rotate(${(1 - enter) * 4}deg)`,
         }}
       >
-        <Photo src={shot.src} width={photo.w} height={photo.h} zoom={zoom} label={`PHOTO ${round.index + 1}`} />
+        <Photo src={shot.src} focus={shot.focus} width={photo.w} height={photo.h} zoom={zoom} label={`PHOTO ${round.index + 1}`} />
         {shot.caption ? (
           <div
             style={{

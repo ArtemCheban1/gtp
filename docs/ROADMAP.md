@@ -14,7 +14,7 @@
 
 ## Наступне
 
-### 1. Обрізка фото (crop/focus) — S
+### 1. Обрізка фото (crop/focus) — S ✅ зроблено
 Зараз фото масштабується `object-fit: cover` по центру. Додати в `PhotoSlot` поле `focus: {x: number, y: number}` (0..1)
 і використати `objectPosition` у `remotion/components/Photo.tsx`. У `portal/components/PhotoSlots.tsx` клік по мініатюрі ставить точку фокусу.
 

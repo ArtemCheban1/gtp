@@ -8,12 +8,14 @@ type Props = {
   height: number;
   /** 1 → 1.08 slow zoom over the round */
   zoom: number;
+  /** Point of interest 0..1; keeps it in frame when the image is cropped by `cover`. */
+  focus?: {x: number; y: number};
   label?: string;
   radius?: number;
 };
 
 /** Photo with a slow Ken Burns zoom; draws a placeholder when no image was uploaded yet. */
-export const Photo: React.FC<Props> = ({src, width, height, zoom, label, radius = 36}) => (
+export const Photo: React.FC<Props> = ({src, width, height, zoom, focus, label, radius = 36}) => (
   <div
     style={{
       width,
@@ -28,7 +30,14 @@ export const Photo: React.FC<Props> = ({src, width, height, zoom, label, radius 
     {src ? (
       <Img
         src={src}
-        style={{width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${zoom})`}}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          objectPosition: `${(focus?.x ?? 0.5) * 100}% ${(focus?.y ?? 0.5) * 100}%`,
+          transformOrigin: `${(focus?.x ?? 0.5) * 100}% ${(focus?.y ?? 0.5) * 100}%`,
+          transform: `scale(${zoom})`,
+        }}
       />
     ) : (
       <div

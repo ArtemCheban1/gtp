@@ -52,17 +52,40 @@ export const PhotoSlots: React.FC<Props> = ({photos, onChange}) => {
                 e.preventDefault();
                 upload(i, e.dataTransfer.files[0]);
               }}
+              onClick={(e) => {
+                // With a photo loaded, a click picks the focus point instead of opening the file dialog.
+                if (!p.src) return;
+                e.preventDefault();
+                const r = e.currentTarget.getBoundingClientRect();
+                const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+                const y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+                set(i, {focus: {x: +x.toFixed(3), y: +y.toFixed(3)}});
+              }}
             >
-              {p.src ? <img src={p.src} alt="" /> : <span>{busy === i ? 'Uploading…' : `Round ${i + 1}`}</span>}
+              {p.src ? (
+                <>
+                  <img
+                    src={p.src}
+                    alt=""
+                    style={{objectPosition: `${(p.focus?.x ?? 0.5) * 100}% ${(p.focus?.y ?? 0.5) * 100}%`}}
+                  />
+                  <i
+                    className="focus-dot"
+                    style={{left: `${(p.focus?.x ?? 0.5) * 100}%`, top: `${(p.focus?.y ?? 0.5) * 100}%`}}
+                  />
+                </>
+              ) : (
+                <span>{busy === i ? 'Uploading…' : `Round ${i + 1}`}</span>
+              )}
               <input type="file" accept="image/*" hidden onChange={(e) => upload(i, e.target.files?.[0])} />
             </label>
-            <small>{TIPS[i]}</small>
+            <small>{TIPS[i]}{p.src ? ' · click photo to set focus' : ''}</small>
             <input placeholder="Optional hint text" value={p.caption ?? ''} onChange={(e) => set(i, {caption: e.target.value})} />
             <div className="row tight">
               <button disabled={i === 0} onClick={() => swap(i, i - 1)} title="Move earlier">
                 ←
               </button>
-              <button disabled={!p.src} onClick={() => set(i, {src: ''})}>
+              <button disabled={!p.src} onClick={() => set(i, {src: '', focus: undefined})}>
                 Remove
               </button>
               <button disabled={i === 2} onClick={() => swap(i, i + 1)} title="Move later">

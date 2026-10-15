@@ -41,7 +41,7 @@ export const Outro: React.FC<{video: VideoProps; rounds: RoundSpec[]}> = ({video
       <div style={{position: 'absolute', top: 560, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 24}}>
         {video.photos.map((p, i) => (
           <div key={i} style={{transform: `translateY(${(1 - s(14 + i * 5)) * 400}px) rotate(${(i - 1) * 3}deg)`}}>
-            <Photo src={p.src} width={310} height={420} zoom={1} radius={24} label={`${i + 1}`} />
+            <Photo src={p.src} focus={p.focus} width={310} height={420} zoom={1} radius={24} label={`${i + 1}`} />
           </div>
         ))}
       </div>
