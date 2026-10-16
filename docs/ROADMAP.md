@@ -18,7 +18,7 @@
 Зараз фото масштабується `object-fit: cover` по центру. Додати в `PhotoSlot` поле `focus: {x: number, y: number}` (0..1)
 і використати `objectPosition` у `remotion/components/Photo.tsx`. У `portal/components/PhotoSlots.tsx` клік по мініатюрі ставить точку фокусу.
 
-### 2. Обкладинка (thumbnail) — S
+### 2. Обкладинка (thumbnail) — S ✅ зроблено
 Додати друге `Composition` у `remotion/Root.tsx` (`Cover`, 1080×1920, 1 кадр): фото 1, великий напис "WHERE IS THIS?" і "3 guesses".
 У сервері endpoint `/api/cover`, який рендерить через `renderStill`. Кнопка "Render cover" у `RenderPanel`.
 

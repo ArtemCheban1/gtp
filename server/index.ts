@@ -4,6 +4,7 @@
  *   GET  /api/geocode?q=        place search via OpenStreetMap Nominatim
  *   POST /api/render           start an MP4 render   → {id}
  *   GET  /api/render/:id       render progress
+ *   POST /api/cover            render the cover still → {url: "/out/….png"}
  *   GET  /api/renders          finished videos in out/
  *   GET/POST /api/projects     saved projects (data/projects/*.json)
  */
@@ -13,7 +14,7 @@ import {randomUUID} from 'node:crypto';
 import {existsSync, mkdirSync, readdirSync, readFileSync, statSync, watch, writeFileSync} from 'node:fs';
 import path from 'node:path';
 import {bundle} from '@remotion/bundler';
-import {renderMedia, selectComposition} from '@remotion/renderer';
+import {renderMedia, renderStill, selectComposition} from '@remotion/renderer';
 import type {VideoProps} from '../shared/types';
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -103,6 +104,13 @@ const jobs = new Map<string, Job>();
 /** Uploaded files are referenced as "/uploads/…" in projects; the headless browser needs absolute URLs. */
 const absolutize = (src: string) => (src.startsWith('/uploads/') ? `http://localhost:${PORT}${src}` : src);
 
+const toInputProps = (props: VideoProps): VideoProps => ({
+  ...props,
+  photos: props.photos.map((p) => ({...p, src: absolutize(p.src)})) as VideoProps['photos'],
+  music: props.music ? {...props.music, src: absolutize(props.music.src)} : null,
+});
+const outName = (props: VideoProps) => `${slug(props.place.name)}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}`;
+
 app.post('/api/render', (req, res) => {
   const props = req.body.props as VideoProps;
   const id = randomUUID().slice(0, 8);
@@ -110,12 +118,8 @@ app.post('/api/render', (req, res) => {
   jobs.set(id, job);
   res.json({id});
 
-  const inputProps: VideoProps = {
-    ...props,
-    photos: props.photos.map((p) => ({...p, src: absolutize(p.src)})) as VideoProps['photos'],
-    music: props.music ? {...props.music, src: absolutize(props.music.src)} : null,
-  };
-  const file = `${slug(props.place.name)}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.mp4`;
+  const inputProps = toInputProps(props);
+  const file = `${outName(props)}.mp4`;
 
   (async () => {
     const serveUrl = await getBundle();
@@ -144,6 +148,22 @@ app.post('/api/render', (req, res) => {
   });
 });
 
+app.post('/api/cover', async (req, res) => {
+  const inputProps = toInputProps(req.body.props as VideoProps);
+  const file = `${outName(inputProps)}-cover.png`;
+  try {
+    const serveUrl = await getBundle();
+    const browserExecutable = process.env.BROWSER_EXECUTABLE || undefined;
+    const composition = await selectComposition({serveUrl, id: 'Cover', inputProps, browserExecutable});
+    await renderStill({composition, serveUrl, output: path.join(OUT, file), inputProps, browserExecutable, imageFormat: 'png'});
+    console.log(`✓ Rendered out/${file}`);
+    res.json({url: `/out/${file}`});
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({error: (e as Error).message});
+  }
+});
+
 app.get('/api/render/:id', (req, res) => {
   const job = jobs.get(req.params.id);
   if (!job) res.status(404).json({error: 'Unknown render'});
@@ -152,7 +172,7 @@ app.get('/api/render/:id', (req, res) => {
 
 app.get('/api/renders', (_, res) => {
   const files = readdirSync(OUT)
-    .filter((f) => f.endsWith('.mp4'))
+    .filter((f) => f.endsWith('.mp4') || f.endsWith('.png'))
     .map((f) => ({name: f, url: `/out/${f}`, time: statSync(path.join(OUT, f)).mtimeMs}))
     .sort((a, b) => b.time - a.time);
   res.json(files);

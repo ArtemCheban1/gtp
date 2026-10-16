@@ -21,6 +21,10 @@ export const startRender = async (props: VideoProps) =>
   json<{id: string}>(
     await fetch('/api/render', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({props})}),
   );
+export const renderCover = async (props: VideoProps) =>
+  json<{url: string}>(
+    await fetch('/api/cover', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({props})}),
+  );
 export const getRender = async (id: string) => json<RenderJob>(await fetch(`/api/render/${id}`));
 export const listRenders = async () => json<{name: string; url: string; time: number}[]>(await fetch('/api/renders'));
 
