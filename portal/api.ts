@@ -61,3 +61,13 @@ export const startPublish = async (video: string, caption: string, targets: Publ
     await fetch('/api/publish', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({video, caption, targets})}),
   );
 export const getPublish = async (id: string) => json<PublishResult[]>(await fetch(`/api/publish/${id}`));
+
+export type PhotoSource = 'wikimedia' | 'mapillary' | 'pexels';
+export type FoundPhoto = {id: string; source: PhotoSource; thumb: string; full: string; width?: number; height?: number; credit: string; page: string};
+export const photoSources = async () => json<Record<PhotoSource, boolean>>(await fetch('/api/photos/sources'));
+export const searchPhotos = async (source: PhotoSource, lat: number, lon: number, q: string) =>
+  json<FoundPhoto[]>(await fetch(`/api/photos/search?${new URLSearchParams({source, lat: String(lat), lon: String(lon), q})}`));
+export const importPhoto = async (url: string) =>
+  json<{url: string}>(
+    await fetch('/api/photos/import', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({url})}),
+  );

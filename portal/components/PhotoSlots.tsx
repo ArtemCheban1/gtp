@@ -30,7 +30,7 @@ export const PhotoSlots: React.FC<Props> = ({photos, onChange}) => {
     setBusy(i);
     setError('');
     try {
-      set(i, {src: await uploadFile(file)});
+      set(i, {src: await uploadFile(file), focus: undefined, credit: undefined, sourceUrl: undefined});
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -81,11 +81,17 @@ export const PhotoSlots: React.FC<Props> = ({photos, onChange}) => {
             </label>
             <small>{TIPS[i]}{p.src ? ' · click photo to set focus' : ''}</small>
             <input placeholder="Optional hint text" value={p.caption ?? ''} onChange={(e) => set(i, {caption: e.target.value})} />
+            <input
+              placeholder="Credit (author, licence) — goes into the caption"
+              title={p.sourceUrl}
+              value={p.credit ?? ''}
+              onChange={(e) => set(i, {credit: e.target.value || undefined})}
+            />
             <div className="row tight">
               <button disabled={i === 0} onClick={() => swap(i, i - 1)} title="Move earlier">
                 ←
               </button>
-              <button disabled={!p.src} onClick={() => set(i, {src: '', focus: undefined})}>
+              <button disabled={!p.src} onClick={() => set(i, {src: '', focus: undefined, credit: undefined, sourceUrl: undefined})}>
                 Remove
               </button>
               <button disabled={i === 2} onClick={() => swap(i, i + 1)} title="Move later">

@@ -7,6 +7,7 @@ import {FPS, HEIGHT, WIDTH, totalFrames} from '../shared/timeline';
 import type {VideoProps} from '../shared/types';
 import {CaptionPanel} from './components/CaptionPanel';
 import {DecoyEditor} from './components/DecoyEditor';
+import {PhotoFinder} from './components/PhotoFinder';
 import {PhotoSlots} from './components/PhotoSlots';
 import {PlacePicker} from './components/PlacePicker';
 import {ProjectBar} from './components/ProjectBar';
@@ -55,6 +56,12 @@ export const App: React.FC = () => {
         <div className="editor">
           <PlacePicker props={props} plan={plan} update={update} />
           <PhotoSlots photos={props.photos} onChange={(fn) => setProps((p) => ({...p, photos: fn(p.photos)}))} />
+          <PhotoFinder
+            place={props.place}
+            onUse={(i, slot) =>
+              setProps((p) => ({...p, photos: p.photos.map((x, j) => (j === i ? {...x, ...slot, focus: undefined} : x)) as VideoProps['photos']}))
+            }
+          />
           <DecoyEditor props={props} plan={plan} update={update} />
           <SettingsPanel props={props} update={update} />
           <VoicePanel props={props} plan={plan} update={update} />

@@ -2,6 +2,8 @@
  * Local API for the portal:
  *   POST /api/upload           photo / music upload  → {url: "/uploads/…"}
  *   GET  /api/geocode?q=        place search via OpenStreetMap Nominatim
+ *   GET  /api/photos/search     free-licence photos near a place (?lat&lon&q&source)
+ *   POST /api/photos/import     download a found photo into uploads → {url}
  *   POST /api/render           queue an MP4 render   → {id}
  *   GET  /api/render/:id       render progress
  *   POST /api/queue            queue saved projects for rendering (one at a time) → {queued, missing}
@@ -24,6 +26,7 @@ import {renderMedia, renderStill, selectComposition} from '@remotion/renderer';
 import {DEFAULT_PROPS} from '../shared/defaults';
 import {buildPlan} from '../shared/rounds';
 import type {VideoProps} from '../shared/types';
+import {importAllowed, photoSources, searchPhotos, type PhotoSource} from './photos';
 import {publish, publishConfig, type PublishResult, type Target} from './publish';
 import {pickEngine, synthesize} from './voice';
 
@@ -94,6 +97,49 @@ app.get('/api/geocode', async (req, res) => {
     );
   } catch (e) {
     res.status(502).json({error: `Geocoding failed: ${(e as Error).message}`});
+  }
+});
+
+// ── Photo search (free-licence sources) ───────────────────────
+app.get('/api/photos/sources', (_, res) => {
+  res.json(photoSources());
+});
+
+app.get('/api/photos/search', async (req, res) => {
+  const lat = Number(req.query.lat);
+  const lon = Number(req.query.lon);
+  const source = String(req.query.source ?? 'wikimedia') as PhotoSource;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    res.status(400).json({error: 'lat/lon required'});
+    return;
+  }
+  try {
+    res.json(await searchPhotos(source, lat, lon, String(req.query.q ?? '').trim()));
+  } catch (e) {
+    res.status(502).json({error: `Photo search failed: ${(e as Error).message}`});
+  }
+});
+
+const IMAGE_EXT: Record<string, string> = {'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp'};
+
+/** Downloads a found photo into uploads → {url: "/uploads/…"} */
+app.post('/api/photos/import', async (req, res) => {
+  const url = String(req.body.url ?? '');
+  if (!importAllowed(url)) {
+    res.status(400).json({error: 'This image host is not allowed'});
+    return;
+  }
+  try {
+    const r = await fetch(url, {headers: {'User-Agent': 'guess-the-place-portal/0.1 (local tool)'}});
+    const type = (r.headers.get('content-type') ?? '').split(';')[0];
+    if (!r.ok || !IMAGE_EXT[type]) throw new Error(`download failed (${r.status} ${type})`);
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (buf.length > 25 * 1024 * 1024) throw new Error('image is larger than 25 MB');
+    const name = `${Date.now()}-${randomUUID().slice(0, 8)}${IMAGE_EXT[type]}`;
+    writeFileSync(path.join(UPLOADS, name), buf);
+    res.json({url: `/uploads/${name}`});
+  } catch (e) {
+    res.status(502).json({error: `Import failed: ${(e as Error).message}`});
   }
 });
 

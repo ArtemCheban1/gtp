@@ -11,6 +11,10 @@ export type PhotoSlot = {
   caption?: string;
   /** Point of interest, 0..1 of the image width/height. Default centre (0.5, 0.5). */
   focus?: {x: number; y: number};
+  /** Attribution added to the post caption, e.g. "Jan Novák, CC BY-SA 4.0, Wikimedia Commons" */
+  credit?: string;
+  /** Where the photo came from (licence page) */
+  sourceUrl?: string;
 };
 
 export type Place = {
