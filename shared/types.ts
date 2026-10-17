@@ -40,6 +40,8 @@ export type VideoProps = {
   music: MusicTrack | null;
   /** 0..1 */
   sfxVolume: number;
+  /** What round 3 asks for: 4 cities (default) or 4 countries of the region. */
+  round3?: 'cities' | 'countries';
   /** Colour theme id (keys of THEMES in remotion/theme.ts). Default 'midnight'. */
   theme?: string;
   texts: {
@@ -54,7 +56,7 @@ export type OptionLetter = 'A' | 'B' | 'C' | 'D';
 export type MapOption = {
   letter: OptionLetter;
   label: string;
-  /** Region option (rounds 1–2): id of a zone or subregion */
+  /** Region option: id of a zone or subregion (rounds 1–2) or a world-atlas country name ('countries' round) */
   regionId?: string;
   /** Point option (round 3) */
   point?: LonLat;
@@ -66,7 +68,7 @@ export type RoundSpec = {
   question: string;
   /** What the map shows while the viewer thinks */
   view: BBox;
-  kind: 'zones' | 'subregions' | 'points';
+  kind: 'zones' | 'subregions' | 'points' | 'countries';
   /** For 'subregions'/'points': the zone/subregion that frames the map */
   focusId?: string;
   options: MapOption[];

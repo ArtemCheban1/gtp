@@ -1,5 +1,6 @@
 import {CITIES} from './geo/cities';
 import {SUBREGIONS, ZONES, subById, subsOfZone, zoneById, WORLD_VIEW} from './geo/regions';
+import {type CountryInfo, countryInfo, countryLabel, pickDecoyCountries} from './geo/countries';
 import {distanceKm, resolvePoint} from './geo/world';
 import type {BBox, LonLat, MapOption, OptionLetter, Place, RoundSpec, VideoProps} from './types';
 
@@ -135,6 +136,11 @@ export function buildPlan(props: VideoProps): Plan {
   };
 
   const decoys = effectiveDecoys(props, subId);
+  if (props.round3 === 'countries') {
+    const r3 = countryRound(props, subId);
+    if ('error' in r3) return r3;
+    return {zoneId: zone.id, subId, rounds: [r1, r2, r3], decoys};
+  }
   const order = shuffle([props.place, ...decoys], mulberry32(props.seed));
   const r3: RoundSpec = {
     index: 2,
@@ -152,6 +158,45 @@ export function buildPlan(props: VideoProps): Plan {
   };
 
   return {zoneId: zone.id, subId, rounds: [r1, r2, r3], decoys};
+}
+
+/** Round 3 as "which country?" — the answer's country plus 3 nearby ones. */
+function countryRound(props: VideoProps, subId: string): RoundSpec | {error: string} {
+  const answer = resolvePoint(ll(props.place))?.country;
+  const rnd = mulberry32(props.seed * 31 + 5);
+  const decoys = answer ? pickDecoyCountries(answer, subId, rnd) : null;
+  const me = answer ? countryInfo(answer) : undefined;
+  if (!answer || !decoys || !me) {
+    return {error: `Not enough countries around ${props.place.name} for a "which country?" round — switch round 3 to cities.`};
+  }
+  const order = shuffle([me, ...decoys], mulberry32(props.seed));
+  // Very wide countries (Russia spans >180°) can't be framed whole, and framing them would shrink the
+  // neighbours to dots: they are framed and labelled around a point instead — the place itself for the answer.
+  const span = ({bounds: [[w], [e]]}: CountryInfo) => (e >= w ? e - w : e + 360 - w);
+  const anchor = (c: CountryInfo): LonLat => (c === me ? ll(props.place) : c.center);
+  const corners = order.flatMap((c): LonLat[] => {
+    if (span(c) <= 120) return c.bounds;
+    const [lon, lat] = anchor(c);
+    return [
+      [lon - 15, lat - 8],
+      [lon + 15, lat + 8],
+    ];
+  });
+  return {
+    index: 2,
+    question: 'Which country?',
+    view: framePoints(corners),
+    kind: 'countries',
+    focusId: subId,
+    options: order.map<MapOption>((c, i) => ({
+      letter: LETTERS[i],
+      label: countryLabel(c.name),
+      regionId: c.name,
+      point: span(c) > 120 ? anchor(c) : c.center,
+      correct: c === me,
+    })),
+    answerLabel: countryLabel(answer),
+  };
 }
 
 export {SUBREGIONS, ZONES};

@@ -3,7 +3,7 @@ import {geoPath} from 'd3-geo';
 import {interpolateColors} from 'remotion';
 import {type Camera, projectionFor} from '../../shared/geo/camera';
 import {SUBREGIONS, ZONES} from '../../shared/geo/regions';
-import {BORDERS, LAND_GROUPS} from '../../shared/geo/world';
+import {BORDERS, COUNTRIES, LAND_GROUPS} from '../../shared/geo/world';
 import type {MapOption, RoundSpec} from '../../shared/types';
 import {fontFamily, useTheme} from '../theme';
 
@@ -42,6 +42,14 @@ export const MapView: React.FC<Props> = ({camera, width, height, round, reveal, 
     [path, projection],
   );
   const borders = useMemo(() => path(BORDERS) ?? '', [path]);
+  // 'countries' round: the four option countries are drawn on top of the land in their option colours
+  const countryShapes = useMemo(
+    () =>
+      round.kind === 'countries'
+        ? round.options.map((o) => ({o, d: path(COUNTRIES.find((c) => c.properties.name === o.regionId)!) ?? ''}))
+        : [],
+    [round, path],
+  );
 
   const correct = round.options.find((o) => o.correct)!;
 
@@ -93,10 +101,26 @@ export const MapView: React.FC<Props> = ({camera, width, height, round, reveal, 
           clipPath={clipX === null ? undefined : `url(#split-${i})`}
         />
       ))}
+      {countryShapes.map(({o, d}) => (
+        <path
+          key={o.letter}
+          d={d}
+          fill={o.correct ? OPTION_COLORS[o.letter] : interpolateColors(reveal, [0, 1], [OPTION_COLORS[o.letter], COLORS.land])}
+          stroke="rgba(255,255,255,0.5)"
+          strokeWidth={1}
+        />
+      ))}
       <path d={borders} fill="none" stroke={COLORS.border} strokeWidth={1} />
+      {reveal > 0
+        ? countryShapes
+            .filter(({o}) => o.correct)
+            .map(({d}) => (
+              <path key="glow" d={d} fill="none" stroke="#FFFFFF" strokeOpacity={reveal * (0.6 + 0.4 * pulse)} strokeWidth={3} />
+            ))
+        : null}
 
       {/* Glow outline around the correct region once revealed */}
-      {round.kind !== 'points' && reveal > 0
+      {(round.kind === 'zones' || round.kind === 'subregions') && reveal > 0
         ? land
             .filter(({g}) => (round.kind === 'zones' ? g.zone : g.sub) === correct.regionId)
             .map(({g, d, clipX}) => (

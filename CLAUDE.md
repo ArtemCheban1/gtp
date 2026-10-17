@@ -17,6 +17,7 @@ Local tool that turns **3 photos + 1 place** into a 9:16 MP4 "Guess the Place" q
   - `geo/regions.ts` — the 4 zones × 4 subregions, country lists, overseas overrides, meridian splits.
   - `geo/world.ts` — Natural Earth 50m countries (world-atlas), land grouped per subregion, `resolvePoint()`.
   - `geo/cities.ts` — curated city list (answer search + round-3 decoys).
+  - `geo/countries.ts` — per-country centre/bounds, display names, decoys for the "which country?" round 3 mode.
   - `caption.ts` — post caption + hashtags for the portal's "Copy caption".
   - `geo/camera.ts` — rotated-Mercator camera, fit-to-bbox, smooth fly between views.
 - `remotion/` — the video. `GuessThePlace.tsx` = Intro → 3× `Round` → `Outro`. `theme.ts` has the colour themes + layout; components read colours via `useTheme()` (never import a palette directly).
