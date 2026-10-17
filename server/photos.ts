@@ -12,8 +12,10 @@ export type FoundPhoto = {
   id: string;
   source: PhotoSource;
   thumb: string;
-  /** Big enough for the video (≤ ~1600px wide) */
+  /** Big enough for the video (≤ ~1920px wide) */
   full: string;
+  /** Tried when `full` can't be downloaded (the original file) */
+  fallback?: string;
   width?: number;
   height?: number;
   /** Ready-made attribution, e.g. "Jan Novák, CC BY-SA 4.0, Wikimedia Commons" */
@@ -21,6 +23,10 @@ export type FoundPhoto = {
   /** Page of the photo, for checking the licence */
   page: string;
 };
+
+/** Standard Commons thumbnail widths (see https://w.wiki/GHai) */
+const THUMB_SMALL = 330;
+const THUMB_FULL = 1920;
 
 const UA = {'User-Agent': 'guess-the-place-portal/0.1 (local tool)'};
 
@@ -69,13 +75,15 @@ export function parseCommons(pages: Record<string, CommonsPage> | undefined): Fo
     const licence = stripHtml(ii.extmetadata?.LicenseShortName?.value ?? '');
     if (!commercialLicence(licence)) continue;
     const artist = stripHtml(ii.extmetadata?.Artist?.value ?? '') || 'Unknown author';
-    // Commons thumbnails: …/thumb/a/ab/Name.jpg/320px-Name.jpg → ask for 1600px when the original is bigger
-    const full = ii.thumburl && ii.width > 1600 ? ii.thumburl.replace(/\/\d+px-([^/]+)$/, '/1600px-$1') : ii.url;
+    // Commons thumbnails: …/thumb/a/ab/Name.jpg/330px-Name.jpg. Commons only serves standard widths
+    // (…, 960, 1280, 1920, 3840 — other sizes answer HTTP 400), so ask for 1920px when the original is bigger.
+    const full = ii.thumburl && ii.width > 1920 ? ii.thumburl.replace(/\/\d+px-([^/]+)$/, `/${THUMB_FULL}px-$1`) : ii.url;
     out.push({
       id: `wm-${p.pageid}`,
       source: 'wikimedia',
       thumb: ii.thumburl ?? ii.url,
       full,
+      fallback: full === ii.url ? undefined : ii.url,
       width: ii.width,
       height: ii.height,
       credit: `${artist.slice(0, 60)}, ${licence}, Wikimedia Commons`,
@@ -91,7 +99,7 @@ async function commons(params: Record<string, string>): Promise<FoundPhoto[]> {
     format: 'json',
     prop: 'imageinfo',
     iiprop: 'url|size|mime|extmetadata',
-    iiurlwidth: '320',
+    iiurlwidth: String(THUMB_SMALL),
     iiextmetadatafilter: 'LicenseShortName|Artist',
     ...params,
   });
@@ -160,12 +168,12 @@ async function searchPexels(name: string): Promise<FoundPhoto[]> {
  * Full-size URLs handed out by searches. Only these can be downloaded through /api/photos/import,
  * whatever CDN host a source happens to use (Mapillary/Commons serve from several).
  */
-const issued = new Set<string>();
+const issued = new Map<string, string | undefined>();
 
 function remember(photos: FoundPhoto[]): FoundPhoto[] {
-  for (const p of photos) issued.add(p.full);
+  for (const p of photos) issued.set(p.full, p.fallback);
   // keep memory bounded; old searches simply need to be repeated
-  while (issued.size > 5000) issued.delete(issued.values().next().value!);
+  while (issued.size > 5000) issued.delete(issued.keys().next().value!);
   return photos;
 }
 
@@ -175,6 +183,9 @@ export async function searchPhotos(source: PhotoSource, lat: number, lon: number
   if (source === 'pexels') return remember(await searchPexels(name));
   return remember(await searchWikimedia(lat, lon, name));
 }
+
+/** Second URL to try when downloading `url` fails (e.g. the original file behind a thumbnail). */
+export const fallbackFor = (url: string) => issued.get(url);
 
 /** A URL may be imported if a search returned it (https only). */
 export function importAllowed(url: string): boolean {

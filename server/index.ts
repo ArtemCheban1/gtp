@@ -26,7 +26,7 @@ import {renderMedia, renderStill, selectComposition} from '@remotion/renderer';
 import {DEFAULT_PROPS} from '../shared/defaults';
 import {buildPlan} from '../shared/rounds';
 import type {VideoProps} from '../shared/types';
-import {importAllowed, photoSources, searchPhotos, type PhotoSource} from './photos';
+import {fallbackFor, importAllowed, photoSources, searchPhotos, type PhotoSource} from './photos';
 import {publish, publishConfig, type PublishResult, type Target} from './publish';
 import {pickEngine, synthesize} from './voice';
 
@@ -122,7 +122,19 @@ app.get('/api/photos/search', async (req, res) => {
 
 const IMAGE_EXT: Record<string, string> = {'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp'};
 
-/** Downloads a found photo into uploads → {url: "/uploads/…"} */
+const MAX_IMAGE = 25 * 1024 * 1024;
+
+async function downloadImage(url: string): Promise<{buf: Buffer; ext: string}> {
+  const r = await fetch(url, {headers: {'User-Agent': 'guess-the-place-portal/0.1 (local tool)'}});
+  const type = (r.headers.get('content-type') ?? '').split(';')[0];
+  if (!r.ok || !IMAGE_EXT[type]) throw new Error(`download failed (${r.status} ${type})`);
+  if (Number(r.headers.get('content-length') ?? 0) > MAX_IMAGE) throw new Error('image is larger than 25 MB');
+  const buf = Buffer.from(await r.arrayBuffer());
+  if (buf.length > MAX_IMAGE) throw new Error('image is larger than 25 MB');
+  return {buf, ext: IMAGE_EXT[type]};
+}
+
+/** Downloads a found photo into uploads → {url: "/uploads/…"} (falls back to the original file) */
 app.post('/api/photos/import', async (req, res) => {
   const url = String(req.body.url ?? '');
   if (!importAllowed(url)) {
@@ -130,13 +142,17 @@ app.post('/api/photos/import', async (req, res) => {
     return;
   }
   try {
-    const r = await fetch(url, {headers: {'User-Agent': 'guess-the-place-portal/0.1 (local tool)'}});
-    const type = (r.headers.get('content-type') ?? '').split(';')[0];
-    if (!r.ok || !IMAGE_EXT[type]) throw new Error(`download failed (${r.status} ${type})`);
-    const buf = Buffer.from(await r.arrayBuffer());
-    if (buf.length > 25 * 1024 * 1024) throw new Error('image is larger than 25 MB');
-    const name = `${Date.now()}-${randomUUID().slice(0, 8)}${IMAGE_EXT[type]}`;
-    writeFileSync(path.join(UPLOADS, name), buf);
+    let image: {buf: Buffer; ext: string};
+    try {
+      image = await downloadImage(url);
+    } catch (e) {
+      const fallback = fallbackFor(url);
+      if (!fallback) throw e;
+      console.warn(`Photo download failed (${(e as Error).message}), trying the original file`);
+      image = await downloadImage(fallback);
+    }
+    const name = `${Date.now()}-${randomUUID().slice(0, 8)}${image.ext}`;
+    writeFileSync(path.join(UPLOADS, name), image.buf);
     res.json({url: `/uploads/${name}`});
   } catch (e) {
     res.status(502).json({error: `Import failed: ${(e as Error).message}`});
