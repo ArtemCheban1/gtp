@@ -4,6 +4,7 @@
  *                        Keeps CC0 / public domain / CC BY / CC BY-SA, drops NC / ND / GFDL-only.
  *   Mapillary          — street-level photos (CC BY-SA 4.0); needs MAPILLARY_TOKEN in .env (free client token)
  *   Pexels             — stock photos by place name (Pexels License); needs PEXELS_API_KEY in .env
+ * Only URLs returned by a search can be downloaded (see importAllowed).
  */
 export type PhotoSource = 'wikimedia' | 'mapillary' | 'pexels';
 
@@ -155,21 +156,30 @@ async function searchPexels(name: string): Promise<FoundPhoto[]> {
   }));
 }
 
-export async function searchPhotos(source: PhotoSource, lat: number, lon: number, name: string): Promise<FoundPhoto[]> {
-  if (!photoSources()[source]) throw new Error(`${source} is not configured in .env`);
-  if (source === 'mapillary') return searchMapillary(lat, lon);
-  if (source === 'pexels') return searchPexels(name);
-  return searchWikimedia(lat, lon, name);
+/**
+ * Full-size URLs handed out by searches. Only these can be downloaded through /api/photos/import,
+ * whatever CDN host a source happens to use (Mapillary/Commons serve from several).
+ */
+const issued = new Set<string>();
+
+function remember(photos: FoundPhoto[]): FoundPhoto[] {
+  for (const p of photos) issued.add(p.full);
+  // keep memory bounded; old searches simply need to be repeated
+  while (issued.size > 5000) issued.delete(issued.values().next().value!);
+  return photos;
 }
 
-/** Only these hosts may be downloaded through /api/photos/import. */
+export async function searchPhotos(source: PhotoSource, lat: number, lon: number, name: string): Promise<FoundPhoto[]> {
+  if (!photoSources()[source]) throw new Error(`${source} is not configured in .env`);
+  if (source === 'mapillary') return remember(await searchMapillary(lat, lon));
+  if (source === 'pexels') return remember(await searchPexels(name));
+  return remember(await searchWikimedia(lat, lon, name));
+}
+
+/** A URL may be imported if a search returned it (https only). */
 export function importAllowed(url: string): boolean {
   try {
-    const u = new URL(url);
-    return (
-      u.protocol === 'https:' &&
-      (u.hostname === 'upload.wikimedia.org' || u.hostname === 'images.pexels.com' || /(^|\.)fbcdn\.net$/.test(u.hostname))
-    );
+    return new URL(url).protocol === 'https:' && issued.has(url);
   } catch {
     return false;
   }

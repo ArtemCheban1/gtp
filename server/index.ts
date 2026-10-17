@@ -126,7 +126,7 @@ const IMAGE_EXT: Record<string, string> = {'image/jpeg': '.jpg', 'image/png': '.
 app.post('/api/photos/import', async (req, res) => {
   const url = String(req.body.url ?? '');
   if (!importAllowed(url)) {
-    res.status(400).json({error: 'This image host is not allowed'});
+    res.status(400).json({error: 'Unknown photo — search again and pick it from the results (the server was probably restarted)'});
     return;
   }
   try {
