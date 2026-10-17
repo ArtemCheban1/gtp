@@ -22,6 +22,12 @@ export type Place = {
   subId?: string;
 };
 
+export type VoiceClip = {
+  /** What the clip says — lets the portal notice when the answer changed and the clip is stale */
+  text: string;
+  src: string;
+};
+
 export type MusicTrack = {
   src: string;
   /** 0..1 */
@@ -40,6 +46,8 @@ export type VideoProps = {
   music: MusicTrack | null;
   /** 0..1 */
   sfxVolume: number;
+  /** Optional voice-over played on each reveal ("It's Oceania!"); one clip per round, null = silent. */
+  voice?: {clips: (VoiceClip | null)[]; volume: number};
   /** What round 3 asks for: 4 cities (default) or 4 countries of the region. */
   round3?: 'cities' | 'countries';
   /** Colour theme id (keys of THEMES in remotion/theme.ts). Default 'midnight'. */

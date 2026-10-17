@@ -13,6 +13,7 @@ import {ProjectBar} from './components/ProjectBar';
 import {QueuePanel} from './components/QueuePanel';
 import {RenderPanel} from './components/RenderPanel';
 import {SettingsPanel} from './components/SettingsPanel';
+import {VoicePanel} from './components/VoicePanel';
 
 const DRAFT_KEY = 'gtp:draft';
 
@@ -56,6 +57,7 @@ export const App: React.FC = () => {
           <PhotoSlots photos={props.photos} onChange={(fn) => setProps((p) => ({...p, photos: fn(p.photos)}))} />
           <DecoyEditor props={props} plan={plan} update={update} />
           <SettingsPanel props={props} update={update} />
+          <VoicePanel props={props} plan={plan} update={update} />
           <QueuePanel />
         </div>
 

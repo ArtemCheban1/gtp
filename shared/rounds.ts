@@ -1,5 +1,5 @@
 import {CITIES} from './geo/cities';
-import {SUBREGIONS, ZONES, subById, subsOfZone, zoneById, WORLD_VIEW} from './geo/regions';
+import {SUBREGIONS, ZONES, canBeOption, subById, subsOfZone, zoneById, WORLD_VIEW} from './geo/regions';
 import {type CountryInfo, countryInfo, countryLabel, pickDecoyCountries} from './geo/countries';
 import {distanceKm, resolvePoint} from './geo/world';
 import type {BBox, LonLat, MapOption, OptionLetter, Place, RoundSpec, VideoProps} from './types';
@@ -53,7 +53,7 @@ export function pickDecoys(place: Place, subId: string, seed: number, count = 3)
   const rnd = mulberry32(seed * 7919 + 17);
   const dist = (c: Place) => distanceKm(ll(c), ll(place));
   const candidates = citiesInSub(subId)
-    .filter((c) => c.name !== place.name)
+    .filter((c) => c.name !== place.name && canBeOption(c.country))
     .sort((a, b) => dist(a) - dist(b));
   for (const minKm of [400, 250, 120, 0]) {
     const eligible = candidates.filter((c) => dist(c) >= minKm);

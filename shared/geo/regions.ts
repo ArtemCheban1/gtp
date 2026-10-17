@@ -248,6 +248,10 @@ export const LON_SPLITS: {country: string; at: number; west: string; east: strin
   {country: 'Australia', at: 138, west: 'oc-west', east: 'oc-east'},
 ];
 
+/** Countries never offered as a wrong answer (round-3 decoy cities or countries). They can still be the answer. */
+export const EXCLUDED_FROM_OPTIONS = new Set(['Russia']);
+export const canBeOption = (country?: string) => !country || !EXCLUDED_FROM_OPTIONS.has(country);
+
 export const zoneById = (id: string) => ZONES.find((z) => z.id === id);
 export const subById = (id: string) => SUBREGIONS.find((s) => s.id === id);
 export const subsOfZone = (zoneId: string) => SUBREGIONS.filter((s) => s.zone === zoneId);

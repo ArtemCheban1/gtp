@@ -1,4 +1,5 @@
 import React from 'react';
+import {canBeOption} from '../../shared/geo/regions';
 import {citiesInSub, type Plan} from '../../shared/rounds';
 import type {VideoProps} from '../../shared/types';
 
@@ -48,7 +49,7 @@ export const DecoyEditor: React.FC<Props> = ({props, plan, update}) => {
       </section>
     );
   }
-  const pool = citiesInSub(plan.subId).filter((c) => c.name !== props.place.name);
+  const pool = citiesInSub(plan.subId).filter((c) => c.name !== props.place.name && canBeOption(c.country));
   const current = plan.decoys;
 
   const setDecoy = (i: number, name: string) => {

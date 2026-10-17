@@ -8,6 +8,8 @@
  *   GET  /api/jobs             all render jobs, newest first
  *   POST /api/cover            render the cover still → {url: "/out/….png"}
  *   GET  /api/renders          finished videos in out/
+ *   GET  /api/voice/engine     which text-to-speech engine is configured
+ *   POST /api/voice            synthesise the 3 reveal lines → {clips}
  *   GET/POST /api/projects     saved projects (data/projects/*.json)
  */
 import express from 'express';
@@ -18,10 +20,14 @@ import path from 'node:path';
 import {bundle} from '@remotion/bundler';
 import {renderMedia, renderStill, selectComposition} from '@remotion/renderer';
 import {DEFAULT_PROPS} from '../shared/defaults';
+import {buildPlan} from '../shared/rounds';
 import type {VideoProps} from '../shared/types';
+import {pickEngine, synthesize} from './voice';
 
-const PORT = Number(process.env.PORT ?? 3001);
 const ROOT = path.resolve(import.meta.dirname, '..');
+// API keys etc. live in .env (git-ignored)
+if (existsSync(path.join(ROOT, '.env'))) process.loadEnvFile(path.join(ROOT, '.env'));
+const PORT = Number(process.env.PORT ?? 3001);
 const UPLOADS = path.join(ROOT, 'data', 'uploads');
 const PROJECTS = path.join(ROOT, 'data', 'projects');
 const OUT = path.join(ROOT, 'out');
@@ -119,6 +125,7 @@ const toInputProps = (props: VideoProps): VideoProps => ({
   ...props,
   photos: props.photos.map((p) => ({...p, src: absolutize(p.src)})) as VideoProps['photos'],
   music: props.music ? {...props.music, src: absolutize(props.music.src)} : null,
+  voice: props.voice ? {...props.voice, clips: props.voice.clips.map((c) => (c ? {...c, src: absolutize(c.src)} : null))} : undefined,
 });
 const outName = (props: VideoProps) => `${slug(props.place.name)}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}`;
 
@@ -222,6 +229,38 @@ app.get('/api/renders', (_, res) => {
     .map((f) => ({name: f, url: `/out/${f}`, time: statSync(path.join(OUT, f)).mtimeMs}))
     .sort((a, b) => b.time - a.time);
   res.json(files);
+});
+
+// ── Voice-over ───────────────────────────────────────────
+/** The line spoken on each reveal. */
+const voiceLine = (answer: string) => `It's ${answer}!`;
+
+app.get('/api/voice/engine', (_, res) => {
+  res.json({engine: pickEngine()?.name ?? null});
+});
+
+/** Generates the 3 reveal lines for these props → {clips: [{text, src}, …]} */
+app.post('/api/voice', async (req, res) => {
+  const engine = pickEngine();
+  if (!engine) {
+    res.status(400).json({error: 'No text-to-speech engine configured — set ELEVENLABS_API_KEY, OPENAI_API_KEY or TTS_COMMAND in .env, or upload your own recordings.'});
+    return;
+  }
+  const plan = buildPlan(req.body.props as VideoProps);
+  if ('error' in plan) {
+    res.status(400).json({error: plan.error});
+    return;
+  }
+  try {
+    const clips = [];
+    for (const r of plan.rounds) {
+      const text = voiceLine(r.answerLabel);
+      clips.push({text, src: `/uploads/${await synthesize(engine, text, UPLOADS)}`});
+    }
+    res.json({engine: engine.name, clips});
+  } catch (e) {
+    res.status(502).json({error: (e as Error).message});
+  }
 });
 
 // ── Projects ─────────────────────────────────────────────

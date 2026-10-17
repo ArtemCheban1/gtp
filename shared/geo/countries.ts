@@ -1,7 +1,7 @@
 import type {MultiPolygon, Polygon} from 'geojson';
 import {geoArea, geoBounds, geoCentroid, geoDistance} from 'd3-geo';
 import type {LonLat} from '../types';
-import {subById} from './regions';
+import {canBeOption, subById} from './regions';
 import {COUNTRIES, subForCountryPoint} from './world';
 
 /** world-atlas abbreviates many names; this is how they read in the video. */
@@ -85,7 +85,7 @@ export function pickDecoyCountries(answer: string, subId: string, rnd: () => num
   if (!me) return null;
   const pool = (filter: (c: CountryInfo) => boolean) =>
     countryInfos()
-      .filter((c) => c.name !== answer && c.area >= MIN_DECOY_AREA && filter(c))
+      .filter((c) => c.name !== answer && canBeOption(c.name) && c.area >= MIN_DECOY_AREA && filter(c))
       .sort((a, b) => geoDistance(a.center, me.center) - geoDistance(b.center, me.center));
   let candidates = pool((c) => c.sub === subId);
   if (candidates.length < 3) candidates = pool((c) => c.zone === subById(subId)?.zone);

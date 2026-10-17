@@ -155,3 +155,7 @@ button.primary {
 .check { display: flex; align-items: center; gap: 6px; font-weight: 600; }
 .jobs { margin: 10px 0 0; padding-left: 18px; font-size: 13px; }
 .jobs li { margin: 3px 0; }
+.voice-lines { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 8px; font-size: 14px; }
+.voice-lines li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.voice-lines audio { height: 30px; }
+.upload-link { color: var(--accent); cursor: pointer; font-size: 13px; text-decoration: underline; }

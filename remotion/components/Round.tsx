@@ -52,6 +52,7 @@ export const Round: React.FC<Props> = ({video, round, fromView}) => {
   const zoom = interpolate(frame, [0, T.enter + think + T.reveal], [1, 1.08]);
   const shot = video.photos[round.index];
   const sfx = video.sfxVolume;
+  const voiceClip = video.voice?.clips[round.index];
 
   return (
     <AbsoluteFill>
@@ -213,6 +214,12 @@ export const Round: React.FC<Props> = ({video, round, fromView}) => {
       <Sequence from={revealStart} layout="none">
         <Html5Audio src={staticFile('sfx/reveal.wav')} volume={sfx} />
       </Sequence>
+      {voiceClip ? (
+        // just after the chime, while the "It's …!" banner pops in
+        <Sequence from={revealStart + 6} layout="none">
+          <Html5Audio src={voiceClip.src} volume={video.voice!.volume} />
+        </Sequence>
+      ) : null}
     </AbsoluteFill>
   );
 };

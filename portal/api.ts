@@ -1,4 +1,4 @@
-import type {Place, VideoProps} from '../shared/types';
+import type {Place, VideoProps, VoiceClip} from '../shared/types';
 
 async function json<T>(r: Response): Promise<T> {
   const body = await r.json();
@@ -46,3 +46,9 @@ export const queueProjects = async (projects: string[]) =>
     await fetch('/api/queue', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({projects})}),
   );
 export const listJobs = async () => json<(RenderJob & {id: string})[]>(await fetch('/api/jobs'));
+
+export const voiceEngine = async () => json<{engine: string | null}>(await fetch('/api/voice/engine'));
+export const generateVoice = async (props: VideoProps) =>
+  json<{engine: string; clips: VoiceClip[]}>(
+    await fetch('/api/voice', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({props})}),
+  );
