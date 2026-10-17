@@ -151,3 +151,7 @@ button.primary {
 .map-pick summary { cursor: pointer; color: var(--muted); font-weight: 700; }
 .minimap { display: block; width: 100%; margin-top: 6px; border-radius: 8px; cursor: crosshair; }
 .caption { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; resize: vertical; }
+.queue-projects { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 4px 12px; margin: 8px 0; }
+.check { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.jobs { margin: 10px 0 0; padding-left: 18px; font-size: 13px; }
+.jobs li { margin: 3px 0; }

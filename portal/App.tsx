@@ -10,6 +10,7 @@ import {DecoyEditor} from './components/DecoyEditor';
 import {PhotoSlots} from './components/PhotoSlots';
 import {PlacePicker} from './components/PlacePicker';
 import {ProjectBar} from './components/ProjectBar';
+import {QueuePanel} from './components/QueuePanel';
 import {RenderPanel} from './components/RenderPanel';
 import {SettingsPanel} from './components/SettingsPanel';
 
@@ -55,6 +56,7 @@ export const App: React.FC = () => {
           <PhotoSlots photos={props.photos} onChange={(fn) => setProps((p) => ({...p, photos: fn(p.photos)}))} />
           <DecoyEditor props={props} plan={plan} update={update} />
           <SettingsPanel props={props} update={update} />
+          <QueuePanel />
         </div>
 
         <aside className="preview">

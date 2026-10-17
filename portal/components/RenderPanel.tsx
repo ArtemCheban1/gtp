@@ -58,7 +58,7 @@ export const RenderPanel: React.FC<{props: VideoProps; disabled: boolean}> = ({p
   };
 
   const missing = props.photos.filter((p) => !p.src).length;
-  const running = job && (job.status === 'bundling' || job.status === 'rendering');
+  const running = job && (job.status === 'queued' || job.status === 'bundling' || job.status === 'rendering');
 
   return (
     <section className="card render">
@@ -78,7 +78,7 @@ export const RenderPanel: React.FC<{props: VideoProps; disabled: boolean}> = ({p
         <div className="progress">
           <div style={{width: `${Math.round(job.progress * 100)}%`}} />
           <span>
-            {job.status === 'bundling' ? 'Preparing…' : job.status === 'rendering' ? `${Math.round(job.progress * 100)}%` : job.status}
+            {job.status === 'queued' ? 'Waiting in queue…' : job.status === 'bundling' ? 'Preparing…' : job.status === 'rendering' ? `${Math.round(job.progress * 100)}%` : job.status}
           </span>
         </div>
       ) : null}

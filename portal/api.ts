@@ -16,7 +16,13 @@ export async function uploadFile(file: File): Promise<string> {
 export type GeoResult = Place & {detail?: string};
 export const geocode = async (q: string) => json<GeoResult[]>(await fetch(`/api/geocode?q=${encodeURIComponent(q)}`));
 
-export type RenderJob = {status: 'bundling' | 'rendering' | 'done' | 'error'; progress: number; url?: string; error?: string};
+export type RenderJob = {
+  status: 'queued' | 'bundling' | 'rendering' | 'done' | 'error';
+  progress: number;
+  label?: string;
+  url?: string;
+  error?: string;
+};
 export const startRender = async (props: VideoProps) =>
   json<{id: string}>(
     await fetch('/api/render', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({props})}),
@@ -34,3 +40,9 @@ export const saveProject = async (name: string, props: VideoProps) =>
   json<{id: string}>(
     await fetch('/api/projects', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name, props})}),
   );
+
+export const queueProjects = async (projects: string[]) =>
+  json<{queued: {project: string; id: string}[]; missing: string[]}>(
+    await fetch('/api/queue', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({projects})}),
+  );
+export const listJobs = async () => json<(RenderJob & {id: string})[]>(await fetch('/api/jobs'));

@@ -2,8 +2,10 @@
  * Local API for the portal:
  *   POST /api/upload           photo / music upload  → {url: "/uploads/…"}
  *   GET  /api/geocode?q=        place search via OpenStreetMap Nominatim
- *   POST /api/render           start an MP4 render   → {id}
+ *   POST /api/render           queue an MP4 render   → {id}
  *   GET  /api/render/:id       render progress
+ *   POST /api/queue            queue saved projects for rendering (one at a time) → {queued, missing}
+ *   GET  /api/jobs             all render jobs, newest first
  *   POST /api/cover            render the cover still → {url: "/out/….png"}
  *   GET  /api/renders          finished videos in out/
  *   GET/POST /api/projects     saved projects (data/projects/*.json)
@@ -15,6 +17,7 @@ import {existsSync, mkdirSync, readdirSync, readFileSync, statSync, watch, write
 import path from 'node:path';
 import {bundle} from '@remotion/bundler';
 import {renderMedia, renderStill, selectComposition} from '@remotion/renderer';
+import {DEFAULT_PROPS} from '../shared/defaults';
 import type {VideoProps} from '../shared/types';
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -98,7 +101,15 @@ for (const dir of ['remotion', 'shared']) {
   });
 }
 
-type Job = {status: 'bundling' | 'rendering' | 'done' | 'error'; progress: number; url?: string; error?: string};
+type Job = {
+  status: 'queued' | 'bundling' | 'rendering' | 'done' | 'error';
+  progress: number;
+  /** Shown in the portal queue, e.g. the place name */
+  label: string;
+  created: number;
+  url?: string;
+  error?: string;
+};
 const jobs = new Map<string, Job>();
 
 /** Uploaded files are referenced as "/uploads/…" in projects; the headless browser needs absolute URLs. */
@@ -111,41 +122,76 @@ const toInputProps = (props: VideoProps): VideoProps => ({
 });
 const outName = (props: VideoProps) => `${slug(props.place.name)}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}`;
 
-app.post('/api/render', (req, res) => {
-  const props = req.body.props as VideoProps;
-  const id = randomUUID().slice(0, 8);
-  const job: Job = {status: 'bundling', progress: 0};
-  jobs.set(id, job);
-  res.json({id});
+// Renders are heavy (they use every CPU core), so they run one at a time in submission order.
+let queueTail: Promise<void> = Promise.resolve();
 
+async function runRender(job: Job, props: VideoProps) {
+  job.status = 'bundling';
   const inputProps = toInputProps(props);
   const file = `${outName(props)}.mp4`;
-
-  (async () => {
-    const serveUrl = await getBundle();
-    job.status = 'rendering';
-    const browserExecutable = process.env.BROWSER_EXECUTABLE || undefined;
-    const composition = await selectComposition({serveUrl, id: 'GuessThePlace', inputProps, browserExecutable});
-    await renderMedia({
-      composition,
-      serveUrl,
-      codec: 'h264',
-      outputLocation: path.join(OUT, file),
-      inputProps,
-      browserExecutable,
-      onProgress: ({progress}) => {
-        job.progress = progress;
-      },
-    });
-    job.status = 'done';
-    job.progress = 1;
-    job.url = `/out/${file}`;
-    console.log(`✓ Rendered out/${file}`);
-  })().catch((e: Error) => {
-    console.error(e);
-    job.status = 'error';
-    job.error = e.message;
+  const serveUrl = await getBundle();
+  job.status = 'rendering';
+  const browserExecutable = process.env.BROWSER_EXECUTABLE || undefined;
+  const composition = await selectComposition({serveUrl, id: 'GuessThePlace', inputProps, browserExecutable});
+  await renderMedia({
+    composition,
+    serveUrl,
+    codec: 'h264',
+    outputLocation: path.join(OUT, file),
+    inputProps,
+    browserExecutable,
+    onProgress: ({progress}) => {
+      job.progress = progress;
+    },
   });
+  job.status = 'done';
+  job.progress = 1;
+  job.url = `/out/${file}`;
+  console.log(`✓ Rendered out/${file}`);
+}
+
+function enqueueRender(props: VideoProps, label = props.place.name): string {
+  const id = randomUUID().slice(0, 8);
+  const job: Job = {status: 'queued', progress: 0, label, created: Date.now()};
+  jobs.set(id, job);
+  queueTail = queueTail.then(() =>
+    runRender(job, props).catch((e: Error) => {
+      console.error(e);
+      job.status = 'error';
+      job.error = e.message;
+    }),
+  );
+  return id;
+}
+
+app.post('/api/render', (req, res) => {
+  res.json({id: enqueueRender(req.body.props as VideoProps)});
+});
+
+/** Batch: queue several saved projects by id. */
+app.post('/api/queue', (req, res) => {
+  const ids = (req.body.projects ?? []) as string[];
+  const queued: {project: string; id: string}[] = [];
+  const missing: string[] = [];
+  for (const project of ids) {
+    const file = path.join(PROJECTS, `${slug(project)}.json`);
+    if (!existsSync(file)) {
+      missing.push(project);
+      continue;
+    }
+    const props = {...DEFAULT_PROPS, ...JSON.parse(readFileSync(file, 'utf8'))} as VideoProps;
+    queued.push({project, id: enqueueRender(props, project)});
+  }
+  res.json({queued, missing});
+});
+
+app.get('/api/jobs', (_, res) => {
+  res.json(
+    [...jobs.entries()]
+      .map(([id, j]) => ({id, ...j}))
+      .sort((a, b) => b.created - a.created)
+      .slice(0, 50),
+  );
 });
 
 app.post('/api/cover', async (req, res) => {
