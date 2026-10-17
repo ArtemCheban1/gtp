@@ -10,6 +10,8 @@
  *   GET  /api/renders          finished videos in out/
  *   GET  /api/voice/engine     which text-to-speech engine is configured
  *   POST /api/voice            synthesise the 3 reveal lines → {clips}
+ *   GET  /api/publish/config   which of Facebook / Instagram are configured in .env
+ *   POST /api/publish          publish a rendered MP4 as a Reel → {id}; GET /api/publish/:id for progress
  *   GET/POST /api/projects     saved projects (data/projects/*.json)
  */
 import express from 'express';
@@ -22,6 +24,7 @@ import {renderMedia, renderStill, selectComposition} from '@remotion/renderer';
 import {DEFAULT_PROPS} from '../shared/defaults';
 import {buildPlan} from '../shared/rounds';
 import type {VideoProps} from '../shared/types';
+import {publish, publishConfig, type PublishResult, type Target} from './publish';
 import {pickEngine, synthesize} from './voice';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
@@ -261,6 +264,41 @@ app.post('/api/voice', async (req, res) => {
   } catch (e) {
     res.status(502).json({error: (e as Error).message});
   }
+});
+
+// ── Publishing (Facebook / Instagram Reels) ─────────────────
+const publishJobs = new Map<string, PublishResult[]>();
+
+app.get('/api/publish/config', (_, res) => {
+  res.json(publishConfig());
+});
+
+app.post('/api/publish', (req, res) => {
+  const name = path.basename(String(req.body.video ?? ''));
+  const file = path.join(OUT, name);
+  const caption = String(req.body.caption ?? '').slice(0, 2200); // Instagram's caption limit
+  const config = publishConfig();
+  const targets = ((req.body.targets ?? []) as Target[]).filter((t) => t === 'facebook' || t === 'instagram');
+  if (!name.endsWith('.mp4') || !existsSync(file)) {
+    res.status(400).json({error: 'Pick a rendered video first'});
+    return;
+  }
+  const missing = targets.filter((t) => !config[t]);
+  if (!targets.length || missing.length) {
+    res.status(400).json({error: missing.length ? `Not configured in .env: ${missing.join(', ')}` : 'Choose where to publish'});
+    return;
+  }
+  const id = randomUUID().slice(0, 8);
+  const results: PublishResult[] = targets.map((target) => ({target, status: 'pending'}));
+  publishJobs.set(id, results);
+  publish(file, caption, results);
+  res.json({id});
+});
+
+app.get('/api/publish/:id', (req, res) => {
+  const results = publishJobs.get(req.params.id);
+  if (!results) res.status(404).json({error: 'Unknown publish job'});
+  else res.json(results);
 });
 
 // ── Projects ─────────────────────────────────────────────

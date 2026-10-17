@@ -52,3 +52,12 @@ export const generateVoice = async (props: VideoProps) =>
   json<{engine: string; clips: VoiceClip[]}>(
     await fetch('/api/voice', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({props})}),
   );
+
+export type PublishTarget = 'facebook' | 'instagram';
+export type PublishResult = {target: PublishTarget; status: 'pending' | 'uploading' | 'processing' | 'done' | 'error'; id?: string; error?: string};
+export const publishConfig = async () => json<Record<PublishTarget, boolean>>(await fetch('/api/publish/config'));
+export const startPublish = async (video: string, caption: string, targets: PublishTarget[]) =>
+  json<{id: string}>(
+    await fetch('/api/publish', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({video, caption, targets})}),
+  );
+export const getPublish = async (id: string) => json<PublishResult[]>(await fetch(`/api/publish/${id}`));
