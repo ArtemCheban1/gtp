@@ -5,6 +5,7 @@ import {DEFAULT_PROPS} from '../shared/defaults';
 import {buildPlan} from '../shared/rounds';
 import {FPS, HEIGHT, WIDTH, totalFrames} from '../shared/timeline';
 import type {VideoProps} from '../shared/types';
+import {CaptionPanel} from './components/CaptionPanel';
 import {DecoyEditor} from './components/DecoyEditor';
 import {PhotoSlots} from './components/PhotoSlots';
 import {PlacePicker} from './components/PlacePicker';
@@ -72,6 +73,7 @@ export const App: React.FC = () => {
           </div>
           <p className="hint">{(duration / FPS).toFixed(1)} s · 1080×1920 · 30 fps</p>
           <RenderPanel props={props} disabled={'error' in plan} />
+          <CaptionPanel props={props} />
         </aside>
       </main>
     </div>

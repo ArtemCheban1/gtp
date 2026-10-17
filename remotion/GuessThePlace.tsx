@@ -7,9 +7,16 @@ import type {VideoProps} from '../shared/types';
 import {Intro} from './components/Intro';
 import {Outro} from './components/Outro';
 import {Round} from './components/Round';
-import {COLORS, fontFamily} from './theme';
+import {ThemeProvider, fontFamily, themeFor, useTheme} from './theme';
 
-export const GuessThePlace: React.FC<VideoProps> = (video) => {
+export const GuessThePlace: React.FC<VideoProps> = (video) => (
+  <ThemeProvider value={themeFor(video.theme)}>
+    <Reel {...video} />
+  </ThemeProvider>
+);
+
+const Reel: React.FC<VideoProps> = (video) => {
+  const {COLORS} = useTheme();
   const {durationInFrames} = useVideoConfig();
   const plan = useMemo(() => buildPlan(video), [video]);
 

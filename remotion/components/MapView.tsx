@@ -5,7 +5,7 @@ import {type Camera, projectionFor} from '../../shared/geo/camera';
 import {SUBREGIONS, ZONES} from '../../shared/geo/regions';
 import {BORDERS, LAND_GROUPS} from '../../shared/geo/world';
 import type {MapOption, RoundSpec} from '../../shared/types';
-import {COLORS, OPTION_COLORS, fontFamily} from '../theme';
+import {fontFamily, useTheme} from '../theme';
 
 type Props = {
   camera: Camera;
@@ -28,6 +28,7 @@ const LABEL_AT = new Map<string, [number, number]>([
 ]);
 
 export const MapView: React.FC<Props> = ({camera, width, height, round, reveal, frame, labelsOpacity = 1}) => {
+  const {COLORS, OPTION_COLORS} = useTheme();
   const projection = useMemo(() => projectionFor(camera, width, height), [camera, width, height]);
   const path = useMemo(() => geoPath(projection), [projection]);
 
@@ -197,6 +198,7 @@ const OptionMarker: React.FC<{
   pulse: number;
   kind: RoundSpec['kind'];
 }> = ({option, layout, reveal, pulse, kind}) => {
+  const {COLORS, OPTION_COLORS} = useTheme();
   const {xy, badge, r, fontSize, pill} = layout;
   const color = OPTION_COLORS[option.letter];
   const isPoint = kind === 'points';

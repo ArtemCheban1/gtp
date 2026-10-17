@@ -1,10 +1,17 @@
 import React from 'react';
 import {AbsoluteFill, Img} from 'remotion';
 import type {VideoProps} from '../shared/types';
-import {COLORS, fontFamily} from './theme';
+import {ThemeProvider, fontFamily, themeFor, useTheme} from './theme';
 
 /** Single-frame thumbnail for the reel: photo 1 full-bleed, big question, "3 guesses" badge. */
-export const Cover: React.FC<VideoProps> = (video) => {
+export const Cover: React.FC<VideoProps> = (video) => (
+  <ThemeProvider value={themeFor(video.theme)}>
+    <CoverFrame {...video} />
+  </ThemeProvider>
+);
+
+const CoverFrame: React.FC<VideoProps> = (video) => {
+  const {COLORS} = useTheme();
   const {src, focus} = video.photos[0];
   const pos = `${(focus?.x ?? 0.5) * 100}% ${(focus?.y ?? 0.5) * 100}%`;
 

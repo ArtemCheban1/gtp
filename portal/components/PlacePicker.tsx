@@ -1,9 +1,11 @@
 import React, {useMemo, useState} from 'react';
 import {CITIES} from '../../shared/geo/cities';
 import {SUBREGIONS, ZONES, subById, zoneById} from '../../shared/geo/regions';
+import {resolvePoint} from '../../shared/geo/world';
 import type {Plan} from '../../shared/rounds';
 import type {Place, VideoProps} from '../../shared/types';
 import {geocode, type GeoResult} from '../api';
+import {MiniMap} from './MiniMap';
 
 type Props = {
   props: VideoProps;
@@ -50,6 +52,12 @@ export const PlacePicker: React.FC<Props> = ({props, plan, update}) => {
   };
 
   const setPlace = (patch: Partial<Place>) => update({place: {...place, ...patch}});
+  const pickOnMap = ([lon, lat]: [number, number]) => {
+    const country = resolvePoint([lon, lat])?.country;
+    // keep a typed-in name; a click picks a new spot, so the old decoys may no longer fit
+    update({place: {...place, lat, lon, country: country ?? place.country, subId: undefined}, decoys: []});
+  };
+
   const detected = 'error' in plan ? null : {zone: zoneById(plan.zoneId)!, sub: subById(plan.subId)!};
 
   return (
@@ -101,6 +109,12 @@ export const PlacePicker: React.FC<Props> = ({props, plan, update}) => {
           <input type="number" step="0.01" value={place.lon} onChange={(e) => setPlace({lon: Number(e.target.value)})} />
         </label>
       </div>
+
+      <details className="map-pick">
+        <summary>Pick on the map</summary>
+        <MiniMap point={[place.lon, place.lat]} onPick={pickOnMap} />
+        <small className="hint">Click to set the coordinates (handy for places without a name). Then type the name above.</small>
+      </details>
 
       <div className="row">
         <label className="grow">

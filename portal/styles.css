@@ -146,3 +146,8 @@ button.primary {
 .download { color: var(--ok); font-weight: 800; }
 .files { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
 .files a { color: var(--text); }
+
+.map-pick { margin: 8px 0; }
+.map-pick summary { cursor: pointer; color: var(--muted); font-weight: 700; }
+.minimap { display: block; width: 100%; margin-top: 6px; border-radius: 8px; cursor: crosshair; }
+.caption { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; resize: vertical; }

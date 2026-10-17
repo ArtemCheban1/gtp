@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import type {VideoProps} from '../../shared/types';
+import {THEMES, DEFAULT_THEME} from '../../remotion/theme';
 import {uploadFile} from '../api';
 
 type Props = {
@@ -45,6 +46,16 @@ export const SettingsPanel: React.FC<Props> = ({props, update}) => {
             value={props.sfxVolume}
             onChange={(e) => update({sfxVolume: Number(e.target.value)})}
           />
+        </label>
+        <label>
+          Colour theme
+          <select value={props.theme ?? DEFAULT_THEME} onChange={(e) => update({theme: e.target.value})}>
+            {Object.entries(THEMES).map(([id, t]) => (
+              <option key={id} value={id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           Background music (your own royalty-free track)

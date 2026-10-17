@@ -1,6 +1,6 @@
 import React from 'react';
 import {interpolate} from 'remotion';
-import {COLORS, fontFamily} from '../theme';
+import {fontFamily, useTheme} from '../theme';
 
 type Props = {
   /** frames since the thinking phase started (can be <0 or past the end) */
@@ -13,6 +13,7 @@ type Props = {
 
 /** Ring timer with the remaining seconds in the middle; turns red for the last 3 seconds. */
 export const Countdown: React.FC<Props> = ({frame, totalFrames, fps, radius, revealed}) => {
+  const {COLORS} = useTheme();
   const f = Math.max(0, Math.min(frame, totalFrames));
   const remaining = Math.ceil((totalFrames - f) / fps);
   const progress = f / totalFrames;

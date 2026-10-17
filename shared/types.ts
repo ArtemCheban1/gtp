@@ -40,6 +40,8 @@ export type VideoProps = {
   music: MusicTrack | null;
   /** 0..1 */
   sfxVolume: number;
+  /** Colour theme id (keys of THEMES in remotion/theme.ts). Default 'midnight'. */
+  theme?: string;
   texts: {
     title: string;
     cta: string;

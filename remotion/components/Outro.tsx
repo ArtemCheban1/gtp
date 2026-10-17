@@ -1,10 +1,11 @@
 import React from 'react';
 import {AbsoluteFill, Html5Audio, Img, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import type {RoundSpec, VideoProps} from '../../shared/types';
-import {COLORS, fontFamily} from '../theme';
+import {fontFamily, useTheme} from '../theme';
 import {Photo} from './Photo';
 
 export const Outro: React.FC<{video: VideoProps; rounds: RoundSpec[]}> = ({video, rounds}) => {
+  const {COLORS} = useTheme();
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const s = (delay: number, damping = 14) => spring({frame: frame - delay, fps, config: {damping, stiffness: 150}});

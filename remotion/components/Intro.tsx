@@ -1,9 +1,10 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import type {VideoProps} from '../../shared/types';
-import {COLORS, fontFamily} from '../theme';
+import {fontFamily, useTheme} from '../theme';
 
 export const Intro: React.FC<{video: VideoProps}> = ({video}) => {
+  const {COLORS} = useTheme();
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const title = spring({frame, fps, config: {damping: 11, stiffness: 140}});

@@ -13,7 +13,7 @@ import {
 import {cameraForBox, lerpCamera} from '../../shared/geo/camera';
 import {T, thinkFrames} from '../../shared/timeline';
 import type {BBox, RoundSpec, VideoProps} from '../../shared/types';
-import {COLORS, LAYOUT, fontFamily} from '../theme';
+import {LAYOUT, fontFamily, useTheme} from '../theme';
 import {Countdown} from './Countdown';
 import {MapView} from './MapView';
 import {Photo} from './Photo';
@@ -28,6 +28,7 @@ type Props = {
 const {map, photo, timer} = LAYOUT;
 
 export const Round: React.FC<Props> = ({video, round, fromView}) => {
+  const {COLORS} = useTheme();
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const think = thinkFrames(video);
