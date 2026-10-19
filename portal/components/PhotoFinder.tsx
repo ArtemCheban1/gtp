@@ -10,13 +10,27 @@ type Props = {
 
 const NAMES: Record<PhotoSource, string> = {
   wikimedia: 'Wikimedia Commons',
+  openverse: 'Openverse (Flickr & more)',
   mapillary: 'Mapillary (street view)',
   pexels: 'Pexels',
+  pixabay: 'Pixabay',
 };
+const ORDER: PhotoSource[] = ['wikimedia', 'openverse', 'mapillary', 'pexels', 'pixabay'];
 
 /** Searches free-licence photos around the answer; one click downloads a photo into a slot with its credit. */
 export const PhotoFinder: React.FC<Props> = ({place, onUse}) => {
-  const [sources, setSources] = useState<Record<PhotoSource, boolean>>({wikimedia: true, mapillary: false, pexels: false});
+  const [sources, setSources] = useState<Record<PhotoSource, boolean>>({
+    wikimedia: true,
+    openverse: true,
+    mapillary: false,
+    pexels: false,
+    pixabay: false,
+  });
+  // Search words; empty = the place name. Reset when another place is picked.
+  const [query, setQuery] = useState('');
+  useEffect(() => setQuery(''), [place.name]);
+  const words = query.trim() || place.name;
+  const ownWords = !!query.trim() && query.trim() !== place.name;
   const [source, setSource] = useState<PhotoSource>('wikimedia');
   const [photos, setPhotos] = useState<FoundPhoto[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -32,7 +46,7 @@ export const PhotoFinder: React.FC<Props> = ({place, onUse}) => {
     setBusy(true);
     setError('');
     try {
-      setPhotos(await searchPhotos(s, place.lat, place.lon, place.name));
+      setPhotos(await searchPhotos(s, place.lat, place.lon, words, !ownWords));
     } catch (e) {
       setError((e as Error).message);
       setPhotos(null);
@@ -54,15 +68,29 @@ export const PhotoFinder: React.FC<Props> = ({place, onUse}) => {
     }
   };
 
-  const enabled = (Object.keys(sources) as PhotoSource[]).filter((s) => sources[s]);
+  const enabled = ORDER.filter((s) => sources[s]);
 
   return (
     <section className="card">
       <h2>Find photos</h2>
       <p className="hint">
-        Free-licence photos around <b>{place.name}</b> (commercial use allowed). Pick one for round 1, 2 or 3 — the author and
-        licence go into the caption automatically. Check the licence page if unsure.
-        {enabled.length < 3 ? ' Mapillary and Pexels need a free key in .env (see server/photos.ts).' : ''}
+        Free-licence photos (commercial use allowed). Pick one for round 1, 2 or 3 — the author and licence go into the caption
+        automatically. Check the licence page if unsure.
+        {enabled.length < ORDER.length ? ' Mapillary, Pexels and Pixabay need a free key in .env (see server/photos.ts).' : ''}
+      </p>
+      <div className="row">
+        <input
+          className="grow"
+          placeholder={`Search words — default: ${place.name} (e.g. "Eiffel Tower", "Montmartre street")`}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && !busy && search()}
+        />
+      </div>
+      <p className="hint">
+        {ownWords
+          ? `Searching for “${words}” (text search; Mapillary still uses the coordinates).`
+          : `Searching around ${place.name}'s coordinates and for its name.`}
       </p>
       <div className="row tight">
         {enabled.map((s) => (

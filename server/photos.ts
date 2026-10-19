@@ -1,12 +1,16 @@
 /**
  * Photo search for the portal's "Find photos" panel. Only sources/licences that allow commercial use.
- *   Wikimedia Commons  — always on; geotagged photos near the place + photos matching its name.
+ *   Wikimedia Commons  — always on; geotagged photos near the place + text search (place name or own words).
  *                        Keeps CC0 / public domain / CC BY / CC BY-SA, drops NC / ND / GFDL-only.
- *   Mapillary          — street-level photos (CC BY-SA 4.0); needs MAPILLARY_TOKEN in .env (free client token)
- *   Pexels             — stock photos by place name (Pexels License); needs PEXELS_API_KEY in .env
+ *   Openverse          — always on; Creative Commons search engine (Flickr, Wikimedia, museums, …), text search,
+ *                        filtered to CC0 / public domain / CC BY / CC BY-SA. Optional OPENVERSE_TOKEN for higher limits.
+ *   Mapillary          — street-level photos around the coordinates (CC BY-SA 4.0); needs MAPILLARY_TOKEN (free)
+ *   Pexels             — stock photos, text search (Pexels License); needs PEXELS_API_KEY (free)
+ *   Pixabay            — stock photos, text search (Pixabay Content License); needs PIXABAY_API_KEY (free)
+ * Unsplash is not offered: its API rules require hotlinking, but renders need a local copy.
  * Only URLs returned by a search can be downloaded (see importAllowed).
  */
-export type PhotoSource = 'wikimedia' | 'mapillary' | 'pexels';
+export type PhotoSource = 'wikimedia' | 'openverse' | 'mapillary' | 'pexels' | 'pixabay';
 
 export type FoundPhoto = {
   id: string;
@@ -32,8 +36,10 @@ const UA = {'User-Agent': 'guess-the-place-portal/0.1 (local tool)'};
 
 export const photoSources = (): Record<PhotoSource, boolean> => ({
   wikimedia: true,
+  openverse: true,
   mapillary: !!process.env.MAPILLARY_TOKEN,
   pexels: !!process.env.PEXELS_API_KEY,
+  pixabay: !!process.env.PIXABAY_API_KEY,
 });
 
 const stripHtml = (s: string) =>
@@ -109,13 +115,14 @@ async function commons(params: Record<string, string>): Promise<FoundPhoto[]> {
   return parseCommons(body.query?.pages);
 }
 
-async function searchWikimedia(lat: number, lon: number, name: string): Promise<FoundPhoto[]> {
-  const [near, named] = await Promise.all([
-    commons({generator: 'geosearch', ggsnamespace: '6', ggscoord: `${lat}|${lon}`, ggsradius: '10000', ggslimit: '50'}),
-    name ? commons({generator: 'search', gsrsearch: `${name} filetype:bitmap`, gsrnamespace: '6', gsrlimit: '30'}) : [],
+/** `near`: also include geotagged photos around lat/lon (off when the user typed their own words). */
+async function searchWikimedia(lat: number, lon: number, query: string, near: boolean): Promise<FoundPhoto[]> {
+  const [around, named] = await Promise.all([
+    near ? commons({generator: 'geosearch', ggsnamespace: '6', ggscoord: `${lat}|${lon}`, ggsradius: '10000', ggslimit: '50'}) : [],
+    query ? commons({generator: 'search', gsrsearch: `${query} filetype:bitmap`, gsrnamespace: '6', gsrlimit: near ? '30' : '50'}) : [],
   ]);
   const seen = new Set<string>();
-  return [...near, ...named].filter((p) => !seen.has(p.id) && seen.add(p.id));
+  return [...around, ...named].filter((p) => !seen.has(p.id) && seen.add(p.id));
 }
 
 async function searchMapillary(lat: number, lon: number): Promise<FoundPhoto[]> {
@@ -143,9 +150,9 @@ async function searchMapillary(lat: number, lon: number): Promise<FoundPhoto[]> 
   }));
 }
 
-async function searchPexels(name: string): Promise<FoundPhoto[]> {
-  if (!name) return [];
-  const r = await fetch(`https://api.pexels.com/v1/search?${new URLSearchParams({query: name, per_page: '30'})}`, {
+async function searchPexels(query: string): Promise<FoundPhoto[]> {
+  if (!query) return [];
+  const r = await fetch(`https://api.pexels.com/v1/search?${new URLSearchParams({query, per_page: '30'})}`, {
     headers: {Authorization: process.env.PEXELS_API_KEY!},
   });
   if (!r.ok) throw new Error(`Pexels ${r.status}`);
@@ -177,11 +184,88 @@ function remember(photos: FoundPhoto[]): FoundPhoto[] {
   return photos;
 }
 
-export async function searchPhotos(source: PhotoSource, lat: number, lon: number, name: string): Promise<FoundPhoto[]> {
+type OpenverseImage = {
+  id: string;
+  url: string;
+  thumbnail?: string;
+  creator?: string;
+  license: string;
+  license_version?: string;
+  provider?: string;
+  source?: string;
+  foreign_landing_url?: string;
+  width?: number;
+  height?: number;
+};
+
+/** "by-sa" + "4.0" → "CC BY-SA 4.0"; cc0 / pdm → "CC0" / "Public domain" */
+export function openverseLicence(license: string, version?: string): string {
+  if (license === 'cc0') return 'CC0';
+  if (license === 'pdm') return 'Public domain';
+  return `CC ${license.toUpperCase()}${version ? ` ${version}` : ''}`;
+}
+
+/** Turns an Openverse search response into photos (exported for tests). */
+export function parseOpenverse(results: OpenverseImage[] | undefined): FoundPhoto[] {
+  return (results ?? [])
+    .filter((r) => ['cc0', 'pdm', 'by', 'by-sa'].includes(r.license) && (!r.width || r.width >= 800))
+    .map((r) => {
+      const site = (r.source || r.provider || 'Openverse').replace(/^./, (c) => c.toUpperCase());
+      return {
+        id: `ov-${r.id}`,
+        source: 'openverse' as const,
+        thumb: r.thumbnail ?? `https://api.openverse.org/v1/images/${r.id}/thumb/`,
+        full: r.url.replace(/^http:\/\//, 'https://'),
+        width: r.width,
+        height: r.height,
+        credit: `${(r.creator || 'Unknown author').slice(0, 60)}, ${openverseLicence(r.license, r.license_version)}, ${site}`,
+        page: r.foreign_landing_url ?? `https://openverse.org/image/${r.id}`,
+      };
+    });
+}
+
+async function searchOpenverse(query: string): Promise<FoundPhoto[]> {
+  if (!query) return [];
+  const qs = new URLSearchParams({q: query, license: 'cc0,pdm,by,by-sa', category: 'photograph', page_size: '40', mature: 'false'});
+  const headers: Record<string, string> = {...UA};
+  if (process.env.OPENVERSE_TOKEN) headers.Authorization = `Bearer ${process.env.OPENVERSE_TOKEN}`;
+  const r = await fetch(`https://api.openverse.org/v1/images/?${qs}`, {headers});
+  if (!r.ok) throw new Error(`Openverse ${r.status}`);
+  const body = (await r.json()) as {results?: OpenverseImage[]};
+  return parseOpenverse(body.results);
+}
+
+async function searchPixabay(query: string): Promise<FoundPhoto[]> {
+  if (!query) return [];
+  const qs = new URLSearchParams({key: process.env.PIXABAY_API_KEY!, q: query.slice(0, 100), image_type: 'photo', per_page: '40', safesearch: 'true'});
+  const r = await fetch(`https://pixabay.com/api/?${qs}`);
+  if (!r.ok) throw new Error(`Pixabay ${r.status}`);
+  const body = (await r.json()) as {
+    hits?: {id: number; pageURL: string; previewURL: string; webformatURL: string; largeImageURL: string; imageWidth: number; imageHeight: number; user: string}[];
+  };
+  return (body.hits ?? []).map((h) => ({
+    id: `pb-${h.id}`,
+    source: 'pixabay' as const,
+    thumb: h.webformatURL,
+    full: h.largeImageURL,
+    width: h.imageWidth,
+    height: h.imageHeight,
+    credit: `${h.user}, Pixabay`,
+    page: h.pageURL,
+  }));
+}
+
+/**
+ * `query`: words to search for (defaults to the place name in the portal).
+ * `near`: also use the coordinates — true while the query is still the place itself.
+ */
+export async function searchPhotos(source: PhotoSource, lat: number, lon: number, query: string, near = true): Promise<FoundPhoto[]> {
   if (!photoSources()[source]) throw new Error(`${source} is not configured in .env`);
   if (source === 'mapillary') return remember(await searchMapillary(lat, lon));
-  if (source === 'pexels') return remember(await searchPexels(name));
-  return remember(await searchWikimedia(lat, lon, name));
+  if (source === 'pexels') return remember(await searchPexels(query));
+  if (source === 'pixabay') return remember(await searchPixabay(query));
+  if (source === 'openverse') return remember(await searchOpenverse(query));
+  return remember(await searchWikimedia(lat, lon, query, near));
 }
 
 /** Second URL to try when downloading `url` fails (e.g. the original file behind a thumbnail). */

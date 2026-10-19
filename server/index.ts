@@ -2,7 +2,7 @@
  * Local API for the portal:
  *   POST /api/upload           photo / music upload  → {url: "/uploads/…"}
  *   GET  /api/geocode?q=        place search via OpenStreetMap Nominatim
- *   GET  /api/photos/search     free-licence photos near a place (?lat&lon&q&source)
+ *   GET  /api/photos/search     free-licence photos (?source&lat&lon&q&near=0|1)
  *   POST /api/photos/import     download a found photo into uploads → {url}
  *   POST /api/render           queue an MP4 render   → {id}
  *   GET  /api/render/:id       render progress
@@ -114,7 +114,7 @@ app.get('/api/photos/search', async (req, res) => {
     return;
   }
   try {
-    res.json(await searchPhotos(source, lat, lon, String(req.query.q ?? '').trim()));
+    res.json(await searchPhotos(source, lat, lon, String(req.query.q ?? '').trim(), req.query.near !== '0'));
   } catch (e) {
     res.status(502).json({error: `Photo search failed: ${(e as Error).message}`});
   }

@@ -47,7 +47,7 @@
 Публікація в Facebook/Instagram через Graph API (потрібен бізнес-акаунт і токен). Окремий модуль сервера; токени — тільки в `.env`, ніколи в git. Зроблено: `server/publish.ts` (resumable upload Reels у Facebook Page та Instagram), кнопка "Publish" під підписом.
 
 ### 11. Пошук фото з вільними ліцензіями — S ✅ зроблено
-Панель "Find photos": Wikimedia Commons (без ключа, лише ліцензії з комерційним використанням), Mapillary і Pexels (ключі в `.env`).
+Панель "Find photos": пошук за місцем або власними словами. Wikimedia Commons і Openverse (без ключа, лише CC0 / PD / CC BY / CC BY-SA), Mapillary, Pexels, Pixabay (ключі в `.env`).
 Фото завантажується в слот, автор і ліцензія автоматично йдуть у підпис ("📷 Photos: …"). Не перевірено з реальною мережею (sandbox).
 
 ## Відомі обмеження
