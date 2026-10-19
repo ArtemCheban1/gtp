@@ -1,13 +1,18 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {buildCaption} from '../../shared/caption';
+import {CAPTION_STYLES, buildCaption, defaultCaptionStyle} from '../../shared/caption';
 import type {VideoProps} from '../../shared/types';
 import {getPublish, listRenders, publishConfig, startPublish, type PublishResult, type PublishTarget} from '../api';
 
 const LABEL: Record<PublishTarget, string> = {facebook: 'Facebook Reel', instagram: 'Instagram Reel'};
 
 /** Ready-to-paste post text with hashtags, and one-click publishing when Meta tokens are set up. */
-export const CaptionPanel: React.FC<{props: VideoProps}> = ({props}) => {
-  const generated = useMemo(() => buildCaption(props), [props]);
+export const CaptionPanel: React.FC<{props: VideoProps; update: (patch: Partial<VideoProps>) => void}> = ({props, update}) => {
+  const style = props.captionStyle ?? defaultCaptionStyle(props);
+  const generated = useMemo(() => buildCaption(props, style), [props, style]);
+  const setStyle = (i: number) => {
+    update({captionStyle: (i + CAPTION_STYLES.length) % CAPTION_STYLES.length});
+    setEdited(null);
+  };
   const [edited, setEdited] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const text = edited ?? generated;
@@ -77,6 +82,21 @@ export const CaptionPanel: React.FC<{props: VideoProps}> = ({props}) => {
   return (
     <section className="card">
       <h2>Post caption</h2>
+      <div className="row tight">
+        <button onClick={() => setStyle(style - 1)} title="Previous style">
+          ←
+        </button>
+        <select className="grow" value={style} onChange={(e) => setStyle(Number(e.target.value))}>
+          {CAPTION_STYLES.map((s, i) => (
+            <option key={i} value={i}>
+              {i + 1}. {s.name}
+            </option>
+          ))}
+        </select>
+        <button onClick={() => setStyle(style + 1)} title="Next style">
+          →
+        </button>
+      </div>
       <textarea className="caption" rows={9} value={text} onChange={(e) => setEdited(e.target.value)} />
       <div className="row tight">
         <button className="primary" onClick={copy}>
