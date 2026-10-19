@@ -38,6 +38,7 @@ export const RapidVideo: React.FC<{video: VideoProps}> = ({video}) => {
 
   return (
     <>
+      {video.intro ? (
       <Sequence durationInFrames={RT.intro} name="Intro">
         <Intro
           video={video}
@@ -46,9 +47,10 @@ export const RapidVideo: React.FC<{video: VideoProps}> = ({video}) => {
           bg={firstPhoto && 'src' in firstPhoto ? firstPhoto.src : ''}
         />
       </Sequence>
+      ) : null}
       {plan.map((p, i) => (
         <Sequence key={i} from={rapidRoundStart(video, i)} durationInFrames={rapidRoundFrames(video)} name={`Round ${i + 1}`}>
-          <RapidRound video={video} plan={p} total={n} fromView={i === 0 ? WORLD_VIEW : plan[i - 1].view} />
+          <RapidRound video={video} plan={p} total={n} fromView={i === 0 && !video.intro ? p.view : i === 0 ? WORLD_VIEW : plan[i - 1].view} instant={i === 0 && !video.intro} />
         </Sequence>
       ))}
       <Sequence from={rapidOutroStart(video)} name="Outro">
@@ -58,7 +60,7 @@ export const RapidVideo: React.FC<{video: VideoProps}> = ({video}) => {
   );
 };
 
-const RapidRound: React.FC<{video: VideoProps; plan: RapidRoundPlan; total: number; fromView: BBox}> = ({video, plan, total, fromView}) => {
+const RapidRound: React.FC<{video: VideoProps; plan: RapidRoundPlan; total: number; fromView: BBox; instant: boolean}> = ({video, plan, total, fromView, instant}) => {
   const {COLORS} = useTheme();
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
@@ -74,7 +76,7 @@ const RapidRound: React.FC<{video: VideoProps; plan: RapidRoundPlan; total: numb
   );
   const reveal = interpolate(frame, [revealStart, revealStart + 8], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const banner = spring({frame: frame - revealStart - 2, fps, config: {damping: 12, stiffness: 180}});
-  const enter = spring({frame, fps, config: {damping: 200}, durationInFrames: RT.enter});
+  const enter = instant ? 1 : spring({frame, fps, config: {damping: 200}, durationInFrames: RT.enter});
   const sfx = video.sfxVolume;
   const seconds = Math.round(think / fps);
 

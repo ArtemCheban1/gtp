@@ -60,12 +60,14 @@ const Reel: React.FC<VideoProps> = (video) => {
 
   return (
     <AbsoluteFill style={{background: `radial-gradient(circle at 50% 30%, ${COLORS.bg2}, ${COLORS.bg})`}}>
-      <Sequence durationInFrames={T.intro} name="Intro">
-        <Intro video={video} />
-      </Sequence>
+      {video.intro ? (
+        <Sequence durationInFrames={T.intro} name="Intro">
+          <Intro video={video} />
+        </Sequence>
+      ) : null}
       {plan.rounds.map((round, i) => (
         <Sequence key={i} from={roundStart(video, i)} durationInFrames={roundFrames(video)} name={`Round ${i + 1}`}>
-          <Round video={video} round={round} fromView={i === 0 ? WORLD_VIEW : plan.rounds[i - 1].view} />
+          <Round video={video} round={round} fromView={i === 0 ? WORLD_VIEW : plan.rounds[i - 1].view} instant={i === 0 && !video.intro} />
         </Sequence>
       ))}
       <Sequence from={outroStart(video)} name="Outro">

@@ -23,18 +23,20 @@ type Props = {
   round: RoundSpec;
   /** View the map flies in from */
   fromView: BBox;
+  /** First frame of the video (no title card): everything is already on screen, no slide-in */
+  instant?: boolean;
 };
 
 const {map, photo, timer} = LAYOUT;
 
-export const Round: React.FC<Props> = ({video, round, fromView}) => {
+export const Round: React.FC<Props> = ({video, round, fromView, instant = false}) => {
   const {COLORS} = useTheme();
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const think = thinkFrames(video);
   const revealStart = T.enter + think;
 
-  const enter = spring({frame, fps, config: {damping: 200}, durationInFrames: T.enter});
+  const enter = instant ? 1 : spring({frame, fps, config: {damping: 200}, durationInFrames: T.enter});
   const camT = interpolate(frame, [0, T.enter], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
@@ -140,7 +142,7 @@ export const Round: React.FC<Props> = ({video, round, fromView}) => {
           round={round}
           reveal={reveal}
           frame={frame}
-          labelsOpacity={interpolate(frame, [T.enter - 6, T.enter + 4], [0, 1], {
+          labelsOpacity={instant ? 1 : interpolate(frame, [T.enter - 6, T.enter + 4], [0, 1], {
             extrapolateLeft: 'clamp',
             extrapolateRight: 'clamp',
           })}

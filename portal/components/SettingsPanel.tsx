@@ -27,6 +27,12 @@ export const SettingsPanel: React.FC<Props> = ({props, update}) => {
     <section className="card">
       <h2>{classic ? '4' : props.format === 'pan' ? '4' : '2'} · {classic ? 'Timing, sound & text' : 'Sound, look & text'}</h2>
       <div className="grid2">
+        {props.format === 'pan' ? null : (
+          <label className="check span2">
+            <input type="checkbox" checked={!!props.intro} onChange={(e) => update({intro: e.target.checked})} /> Start with a title card (off is
+            better: the first round starts at once, so fewer viewers swipe away)
+          </label>
+        )}
         <label>
           Episode number (shown as “#12” in the title, cover and caption)
           <input
@@ -96,10 +102,12 @@ export const SettingsPanel: React.FC<Props> = ({props, update}) => {
       <div className="grid2">
         {classic ? (
           <>
-            <label>
-              Intro title
-              <input value={props.texts.title} onChange={(e) => setText('title', e.target.value)} />
-            </label>
+            {props.intro ? (
+              <label>
+                Intro title
+                <input value={props.texts.title} onChange={(e) => setText('title', e.target.value)} />
+              </label>
+            ) : null}
             <label>
               Ending question
               <input value={props.texts.cta} onChange={(e) => setText('cta', e.target.value)} />

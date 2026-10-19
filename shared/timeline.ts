@@ -16,9 +16,11 @@ export const T = {
 
 export const thinkFrames = (p: Pick<VideoProps, 'thinkSeconds'>) => Math.round(p.thinkSeconds * FPS);
 export const roundFrames = (p: Pick<VideoProps, 'thinkSeconds'>) => T.enter + thinkFrames(p) + T.reveal;
-export const roundStart = (p: Pick<VideoProps, 'thinkSeconds'>, i: number) => T.intro + i * roundFrames(p);
-export const outroStart = (p: Pick<VideoProps, 'thinkSeconds'>) => roundStart(p, 3);
-export const totalFrames = (p: Pick<VideoProps, 'thinkSeconds'>) => outroStart(p) + T.outro;
+/** Title card length — 0 unless the project turns it on (most viewers swipe away from a title card). */
+export const introFrames = (p: Pick<VideoProps, 'intro'>) => (p.intro ? T.intro : 0);
+export const roundStart = (p: Pick<VideoProps, 'thinkSeconds' | 'intro'>, i: number) => introFrames(p) + i * roundFrames(p);
+export const outroStart = (p: Pick<VideoProps, 'thinkSeconds' | 'intro'>) => roundStart(p, 3);
+export const totalFrames = (p: Pick<VideoProps, 'thinkSeconds' | 'intro'>) => outroStart(p) + T.outro;
 
 // ── Rapid format ──
 export const RT = {
@@ -28,10 +30,11 @@ export const RT = {
   reveal: 33,
   outro: 120,
 };
-type RapidTiming = {rapid?: {seconds: number; rounds: unknown[]}};
+type RapidTiming = {intro?: boolean; rapid?: {seconds: number; rounds: unknown[]}};
+export const rapidIntroFrames = (p: RapidTiming) => (p.intro ? RT.intro : 0);
 export const rapidThink = (p: RapidTiming) => Math.round((p.rapid?.seconds ?? 3) * FPS);
 export const rapidRoundFrames = (p: RapidTiming) => RT.enter + rapidThink(p) + RT.reveal;
-export const rapidRoundStart = (p: RapidTiming, i: number) => RT.intro + i * rapidRoundFrames(p);
+export const rapidRoundStart = (p: RapidTiming, i: number) => rapidIntroFrames(p) + i * rapidRoundFrames(p);
 export const rapidOutroStart = (p: RapidTiming) => rapidRoundStart(p, p.rapid?.rounds.length ?? 0);
 
 // ── Pan format ──

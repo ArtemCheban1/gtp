@@ -72,6 +72,8 @@ export type PanConfig = {
 export type VideoProps = {
   /** Default 'classic' (projects saved before formats existed) */
   format?: VideoFormat;
+  /** Start with the title card ("Guess the Place" / "Guess the Country #12"). Default off: viewers swipe away. */
+  intro?: boolean;
   /** Episode number shown in titles/cover/caption ("#12"); unset = none */
   episode?: number;
   rapid?: RapidConfig;
