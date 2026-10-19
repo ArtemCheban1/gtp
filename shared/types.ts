@@ -52,6 +52,8 @@ export type VideoProps = {
   sfxVolume: number;
   /** Optional voice-over played on each reveal ("It's Oceania!"); one clip per round, null = silent. */
   voice?: {clips: (VoiceClip | null)[]; volume: number};
+  /** Index into CAPTION_STYLES (shared/caption.ts); unset = picked from the seed. */
+  captionStyle?: number;
   /** What round 3 asks for: 4 cities (default) or 4 countries of the region. */
   round3?: 'cities' | 'countries';
   /** Colour theme id (keys of THEMES in remotion/theme.ts). Default 'midnight'. */

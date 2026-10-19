@@ -3,7 +3,8 @@
  *   Wikimedia Commons  — always on; geotagged photos near the place + text search (place name or own words).
  *                        Keeps CC0 / public domain / CC BY / CC BY-SA, drops NC / ND / GFDL-only.
  *   Openverse          — always on; Creative Commons search engine (Flickr, Wikimedia, museums, …), text search,
- *                        filtered to CC0 / public domain / CC BY / CC BY-SA. Optional OPENVERSE_TOKEN for higher limits.
+ *                        filtered to CC0 / public domain / CC BY / CC BY-SA. Optional OPENVERSE_CLIENT_ID +
+ *                        OPENVERSE_CLIENT_SECRET (free registration) for higher limits.
  *   Mapillary          — street-level photos around the coordinates (CC BY-SA 4.0); needs MAPILLARY_TOKEN (free)
  *   Pexels             — stock photos, text search (Pexels License); needs PEXELS_API_KEY (free)
  *   Pixabay            — stock photos, text search (Pixabay Content License); needs PIXABAY_API_KEY (free)
@@ -224,15 +225,54 @@ export function parseOpenverse(results: OpenverseImage[] | undefined): FoundPhot
     });
 }
 
+// Openverse: anonymous requests may ask for at most 20 results per page (bigger pages answer 401),
+// so without credentials two pages of 20 are fetched. With OPENVERSE_CLIENT_ID / OPENVERSE_CLIENT_SECRET
+// (free: POST https://api.openverse.org/v1/auth_tokens/register/) the server gets a token itself.
+let openverseToken: {value: string; expires: number} | null = null;
+
+async function openverseAuth(): Promise<string | null> {
+  if (process.env.OPENVERSE_TOKEN) return process.env.OPENVERSE_TOKEN;
+  const id = process.env.OPENVERSE_CLIENT_ID;
+  const secret = process.env.OPENVERSE_CLIENT_SECRET;
+  if (!id || !secret) return null;
+  if (openverseToken && openverseToken.expires > Date.now() + 60_000) return openverseToken.value;
+  const r = await fetch('https://api.openverse.org/v1/auth_tokens/token/', {
+    method: 'POST',
+    headers: {...UA, 'Content-Type': 'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({grant_type: 'client_credentials', client_id: id, client_secret: secret}),
+  });
+  if (!r.ok) throw new Error(`Openverse login failed (${r.status}) — check OPENVERSE_CLIENT_ID / OPENVERSE_CLIENT_SECRET`);
+  const body = (await r.json()) as {access_token: string; expires_in: number};
+  openverseToken = {value: body.access_token, expires: Date.now() + body.expires_in * 1000};
+  return body.access_token;
+}
+
 async function searchOpenverse(query: string): Promise<FoundPhoto[]> {
   if (!query) return [];
-  const qs = new URLSearchParams({q: query, license: 'cc0,pdm,by,by-sa', category: 'photograph', page_size: '40', mature: 'false'});
+  const token = await openverseAuth();
   const headers: Record<string, string> = {...UA};
-  if (process.env.OPENVERSE_TOKEN) headers.Authorization = `Bearer ${process.env.OPENVERSE_TOKEN}`;
-  const r = await fetch(`https://api.openverse.org/v1/images/?${qs}`, {headers});
-  if (!r.ok) throw new Error(`Openverse ${r.status}`);
-  const body = (await r.json()) as {results?: OpenverseImage[]};
-  return parseOpenverse(body.results);
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const pages = token ? [{page: '1', page_size: '50'}] : [{page: '1', page_size: '20'}, {page: '2', page_size: '20'}];
+  const results: OpenverseImage[] = [];
+  for (const p of pages) {
+    const qs = new URLSearchParams({q: query, license: 'cc0,pdm,by,by-sa', category: 'photograph', mature: 'false', ...p});
+    const r = await fetch(`https://api.openverse.org/v1/images/?${qs}`, {headers});
+    if (r.status === 401 || r.status === 403) {
+      if (token) openverseToken = null; // expired or revoked — log in again next time
+      if (results.length) break; // keep the first page
+      throw new Error(
+        `Openverse ${r.status}: ${token ? 'token rejected' : 'anonymous access refused'} — add OPENVERSE_CLIENT_ID / OPENVERSE_CLIENT_SECRET to .env (see server/photos.ts)`,
+      );
+    }
+    if (!r.ok) {
+      if (results.length) break;
+      throw new Error(`Openverse ${r.status}`);
+    }
+    const body = (await r.json()) as {results?: OpenverseImage[]; page_count?: number};
+    results.push(...(body.results ?? []));
+    if ((body.page_count ?? 1) <= Number(p.page)) break;
+  }
+  return parseOpenverse(results);
 }
 
 async function searchPixabay(query: string): Promise<FoundPhoto[]> {

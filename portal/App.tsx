@@ -84,7 +84,7 @@ export const App: React.FC = () => {
           </div>
           <p className="hint">{(duration / FPS).toFixed(1)} s · 1080×1920 · 30 fps</p>
           <RenderPanel props={props} disabled={'error' in plan} />
-          <CaptionPanel props={props} />
+          <CaptionPanel props={props} update={update} />
         </aside>
       </main>
     </div>
