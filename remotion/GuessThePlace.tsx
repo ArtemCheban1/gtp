@@ -9,20 +9,21 @@ import {Outro} from './components/Outro';
 import {Round} from './components/Round';
 import {PanVideo} from './formats/Pan';
 import {RapidVideo} from './formats/Rapid';
+import {SpotVideo} from './formats/Spot';
 import {ThemeProvider, fontFamily, themeFor, useTheme} from './theme';
 
 export const GuessThePlace: React.FC<VideoProps> = (video) => (
   <ThemeProvider value={themeFor(video.theme)}>
-    {video.format === 'rapid' || video.format === 'pan' ? <OtherFormat {...video} /> : <Reel {...video} />}
+    {video.format === 'rapid' || video.format === 'pan' || video.format === 'spot' ? <OtherFormat {...video} /> : <Reel {...video} />}
   </ThemeProvider>
 );
 
-/** Rapid / pan formats share the background and the music bed with the classic reel. */
+/** Rapid / pan / spot formats share the background and the music bed with the classic reel. */
 const OtherFormat: React.FC<VideoProps> = (video) => {
   const {COLORS} = useTheme();
   return (
     <AbsoluteFill style={{background: `radial-gradient(circle at 50% 30%, ${COLORS.bg2}, ${COLORS.bg})`}}>
-      {video.format === 'rapid' ? <RapidVideo video={video} /> : <PanVideo video={video} />}
+      {video.format === 'rapid' ? <RapidVideo video={video} /> : video.format === 'spot' ? <SpotVideo video={video} /> : <PanVideo video={video} />}
       <Music video={video} />
     </AbsoluteFill>
   );

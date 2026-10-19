@@ -25,7 +25,7 @@ export const SettingsPanel: React.FC<Props> = ({props, update}) => {
 
   return (
     <section className="card">
-      <h2>{classic ? '4' : props.format === 'pan' ? '4' : '2'} · {classic ? 'Timing, sound & text' : 'Sound, look & text'}</h2>
+      <h2>{classic || props.format === 'pan' ? '4' : '2'} · {classic ? 'Timing, sound & text' : 'Sound, look & text'}</h2>
       <div className="grid2">
         {props.format === 'pan' ? null : (
           <label className="check span2">

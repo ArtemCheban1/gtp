@@ -13,6 +13,7 @@ const tag = (s: string) =>
 function usedPhotos(props: VideoProps): PhotoSlot[] {
   if (props.format === 'rapid') return (props.rapid?.rounds ?? []).flatMap((r) => (r.kind === 'photo' ? [r] : []));
   if (props.format === 'pan') return props.photos.slice(0, 1);
+  if (props.format === 'spot') return [];
   return props.photos;
 }
 
@@ -173,9 +174,48 @@ export const PAN_STYLES: Style[] = [
   },
 ];
 
+export const SPOT_STYLES: Style[] = [
+  {
+    name: 'Spot it',
+    intro: ({rounds}) => [`🗺️ One country on each map is too big. Can you spot all ${rounds}?`, '', 'Comment your score 👇'],
+    spoiler: 'Answers below ⬇️',
+    tags: ['#mapquiz', '#spotthedifference'],
+  },
+  {
+    name: "Something's off",
+    intro: () => ["Something's off with these maps… 🤔", '', 'How many did you catch? Be honest 👇'],
+    spoiler: 'The answers ⬇️',
+    tags: ['#maps', '#mapnerd'],
+  },
+  {
+    name: 'Map nerds',
+    intro: ({seconds}) => [`Map nerds only 🧠 Find the country that's too big — ${seconds} seconds per map`, '', 'Comment your score 👇'],
+    spoiler: 'Check yourself ⬇️',
+    tags: ['#mapnerd', '#geographychallenge'],
+  },
+  {
+    name: 'Last one is evil',
+    intro: () => ['The first one is easy. The last one is evil 😈', '', 'At which map did you get lost? 👇'],
+    spoiler: 'Answers (no cheating!) ⬇️',
+    tags: ['#mapquiz', '#brainteaser'],
+  },
+  {
+    name: 'Would you notice?',
+    intro: () => ['Would you notice if a country grew 30%? 👀', '', 'Test yourself — then comment your score'],
+    spoiler: 'Answers ⬇️',
+    tags: ['#maps', '#didyouknow'],
+  },
+  {
+    name: 'Tag a friend',
+    intro: ({rounds}) => [`Spot the oversized country — ${rounds} maps 🔍`, '', 'Tag a friend who thinks they know maps 👯'],
+    spoiler: 'All answers ⬇️',
+    tags: ['#spotthedifference', '#geographyquiz'],
+  },
+];
+
 /** Caption styles available for a format. */
 export const captionStyles = (format: VideoFormat | undefined): Style[] =>
-  format === 'rapid' ? RAPID_STYLES : format === 'pan' ? PAN_STYLES : CAPTION_STYLES;
+  format === 'rapid' ? RAPID_STYLES : format === 'pan' ? PAN_STYLES : format === 'spot' ? SPOT_STYLES : CAPTION_STYLES;
 
 /** Style used when the project has none saved: varies with the seed so posts don't all look the same. */
 export const defaultCaptionStyle = (props: Pick<VideoProps, 'seed' | 'format'>) =>
@@ -190,23 +230,27 @@ export function buildCaption(props: VideoProps, styleIndex = props.captionStyle 
   const style = styles[((styleIndex % styles.length) + styles.length) % styles.length];
   const {place} = props;
   const rapid = props.format === 'rapid';
+  const spot = props.format === 'spot';
   const tags = ['#geography', '#geoguessr', '#travel', '#guesstheplace', '#quiz', ...style.tags];
-  if (!rapid) {
+  if (!rapid && !spot) {
     if (place.country) tags.push(tag(place.country));
     if (place.name && place.name !== place.country) tags.push(tag(place.name));
   }
 
   const rounds = props.rapid?.rounds ?? [];
+  const spotRounds = props.spot?.rounds ?? [];
   const intro = style.intro({
-    seconds: rapid ? props.rapid?.seconds ?? 3 : props.thinkSeconds,
+    seconds: rapid ? props.rapid?.seconds ?? 3 : spot ? props.spot?.seconds ?? 6 : props.thinkSeconds,
     cta: props.texts.cta.trim(),
-    rounds: rounds.length,
+    rounds: spot ? spotRounds.length : rounds.length,
   });
   while (intro.length && !intro[intro.length - 1]) intro.pop(); // empty ending question
   // "Ep. 12" rather than "#12", which Instagram would turn into a hashtag
   if (props.episode && intro.length) intro[0] = `Ep. ${props.episode} · ${intro[0]}`;
 
-  const answer = rapid
+  const answer = spot
+    ? spotRounds.map((r, i) => `${i + 1}. ${countryLabel(r.country)} (×${r.scale} bigger)`)
+    : rapid
     ? rounds.map((r, i) => `${i + 1}. ${r.kind === 'country' ? countryLabel(r.country) : r.answer || '?'}`)
     : [`✅ ${place.name}${place.country && place.country !== place.name ? `, ${place.country}` : ''}`];
 

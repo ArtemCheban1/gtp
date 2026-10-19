@@ -2,8 +2,8 @@
 
 Local tool that turns **3 photos + 1 place** into a 9:16 MP4 "Guess the Place" quiz reel
 (GeoGuessr-style, 3 rounds: part of the world → region → exact place). Video text is English.
-Other formats (`VideoProps.format`): **rapid** (5–10 quick "name this country" map/photo rounds) and **pan**
-(one photo slowly panned, "Do you know this city?"). One composition (`GuessThePlace`) switches on the format.
+Other formats (`VideoProps.format`): **rapid** (5–10 quick "name this country" map/photo rounds), **pan**
+(one photo slowly panned, "Do you know this city?") and **spot** ("What's wrong with this map?" — one country per map drawn too big). One composition (`GuessThePlace`) switches on the format.
 
 ## Run
 - `npm install` then `npm run dev` → portal on http://localhost:5173, API on :3001.
@@ -21,9 +21,10 @@ Other formats (`VideoProps.format`): **rapid** (5–10 quick "name this country"
   - `geo/cities.ts` — curated city list (answer search + round-3 decoys).
   - `geo/countries.ts` — per-country centre/bounds, display names, decoys for the "which country?" round 3 mode.
   - `rapid.ts` — rapid format: country picking by difficulty (`RAPID_EASY`/`RAPID_MEDIUM`), map views, `rapidPlan()`.
+  - `spot.ts` — "What's wrong with this map?": areas, candidate countries per area/scale, `pickSpotRounds()`, `spotPlan()`.
   - `caption.ts` — post caption + hashtags (caption styles per format) for the portal's "Copy caption".
   - `geo/camera.ts` — rotated-Mercator camera, fit-to-bbox, smooth fly between views.
-- `remotion/` — the video. `GuessThePlace.tsx` = Intro → 3× `Round` → `Outro` (classic), or `formats/Rapid.tsx` / `formats/Pan.tsx`. `Cover.tsx` = thumbnail for every format. `theme.ts` has the colour themes + layout; components read colours via `useTheme()` (never import a palette directly).
+- `remotion/` — the video. `GuessThePlace.tsx` = Intro → 3× `Round` → `Outro` (classic), or `formats/Rapid.tsx` / `formats/Pan.tsx` / `formats/Spot.tsx` (map: `components/SpotMap.tsx`, per-country paths). `Cover.tsx` = thumbnail for every format. `theme.ts` has the colour themes + layout; components read colours via `useTheme()` (never import a palette directly).
 - `portal/` — Vite + React UI with `@remotion/player` live preview.
 - `server/index.ts` — Express: uploads, Nominatim geocoding proxy, render queue (`@remotion/renderer`, one job at a time), projects.
 - `server/photos.ts` — free-licence photo search (Wikimedia Commons + Openverse; Mapillary/Pexels/Pixabay with keys in `.env`), by place or own words + download allowlist; credits go into `PhotoSlot.credit` → caption.

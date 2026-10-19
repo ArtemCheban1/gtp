@@ -4,6 +4,7 @@ import {GuessThePlace} from '../remotion/GuessThePlace';
 import {DEFAULT_PROPS} from '../shared/defaults';
 import {buildPlan} from '../shared/rounds';
 import {defaultRapid} from '../shared/rapid';
+import {defaultSpot} from '../shared/spot';
 import {FPS, HEIGHT, WIDTH, videoFrames} from '../shared/timeline';
 import type {VideoFormat, VideoProps} from '../shared/types';
 import {CaptionPanel} from './components/CaptionPanel';
@@ -17,6 +18,7 @@ import {QueuePanel} from './components/QueuePanel';
 import {RapidEditor, rapidPhotoTargets, withRapidPhoto} from './components/RapidEditor';
 import {RenderPanel} from './components/RenderPanel';
 import {SettingsPanel} from './components/SettingsPanel';
+import {SpotEditor} from './components/SpotEditor';
 import {VoicePanel} from './components/VoicePanel';
 
 const DRAFT_KEY = 'gtp:draft';
@@ -25,6 +27,7 @@ const FORMATS: {id: VideoFormat; name: string; hint: string}[] = [
   {id: 'classic', name: '3 rounds', hint: '3 photos: part of the world → region → exact place'},
   {id: 'rapid', name: 'Rapid', hint: '5–10 quick rounds: name the country on the map (or a photo)'},
   {id: 'pan', name: 'City pan', hint: 'One photo slowly panned: “Do you know this city?”'},
+  {id: 'spot', name: "What's wrong?", hint: 'One country per map is drawn too big — spot it before the timer ends'},
 ];
 
 /** Why this project can't be rendered yet (null = ready). */
@@ -36,6 +39,7 @@ function formatError(props: VideoProps, classicPlanError: string | null): string
     return i >= 0 ? `Round ${i + 1} needs a photo and an answer` : null;
   }
   if (props.format === 'pan') return props.place.name.trim() ? null : 'Pick the place first';
+  if (props.format === 'spot') return props.spot?.rounds.length ? null : 'Add some maps';
   return classicPlanError;
 }
 
@@ -70,6 +74,7 @@ export const App: React.FC = () => {
       format: f,
       rapid: f === 'rapid' ? props.rapid ?? defaultRapid(props.seed) : props.rapid,
       pan: f === 'pan' ? props.pan ?? DEFAULT_PAN : props.pan,
+      spot: f === 'spot' ? props.spot ?? defaultSpot(props.seed) : props.spot,
     });
   const photoTargets = format === 'rapid' ? rapidPhotoTargets(props.rapid) : null;
 
@@ -95,7 +100,9 @@ export const App: React.FC = () => {
             <small className="hint">{FORMATS.find((f) => f.id === format)!.hint}</small>
           </section>
 
-          {format === 'rapid' ? (
+          {format === 'spot' ? (
+            <SpotEditor props={props} update={update} />
+          ) : format === 'rapid' ? (
             <>
               <RapidEditor props={props} update={update} />
               {photoTargets?.length ? (

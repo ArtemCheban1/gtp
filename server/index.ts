@@ -193,8 +193,12 @@ const toInputProps = (props: VideoProps): VideoProps => ({
   voice: props.voice ? {...props.voice, clips: props.voice.clips.map((c) => (c ? {...c, src: absolutize(c.src)} : null))} : undefined,
 });
 /** Human name of a project: the place, or the rapid title + episode ("Guess the Country 12"). */
-const nameOf = (props: VideoProps) =>
-  props.format === 'rapid' ? `${props.rapid?.title || 'Guess the Country'}${props.episode ? ` ${props.episode}` : ''}` : props.place.name;
+const nameOf = (props: VideoProps) => {
+  const ep = props.episode ? ` ${props.episode}` : '';
+  if (props.format === 'rapid') return `${props.rapid?.title || 'Guess the Country'}${ep}`;
+  if (props.format === 'spot') return `${props.spot?.title || "What's wrong with this map"}${ep}`;
+  return props.place.name;
+};
 const outName = (props: VideoProps) => `${slug(`${nameOf(props)}${props.format === 'pan' ? ' pan' : ''}`)}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}`;
 
 // Renders are heavy (they use every CPU core), so they run one at a time in submission order.

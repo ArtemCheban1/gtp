@@ -59,7 +59,7 @@ export const RenderPanel: React.FC<{props: VideoProps; disabled: boolean}> = ({p
 
   // rapid checks its photo rounds before rendering (App), pan uses only the first slot
   const missing =
-    props.format === 'rapid' ? 0 : props.photos.slice(0, props.format === 'pan' ? 1 : 3).filter((p) => !p.src).length;
+    props.format === 'rapid' || props.format === 'spot' ? 0 : props.photos.slice(0, props.format === 'pan' ? 1 : 3).filter((p) => !p.src).length;
   const running = job && (job.status === 'queued' || job.status === 'bundling' || job.status === 'rendering');
 
   return (

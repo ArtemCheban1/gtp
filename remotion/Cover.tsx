@@ -2,9 +2,11 @@ import React from 'react';
 import {AbsoluteFill, Img} from 'remotion';
 import {cameraForBox} from '../shared/geo/camera';
 import {rapidPlan} from '../shared/rapid';
+import {spotPlan} from '../shared/spot';
 import {HEIGHT, WIDTH} from '../shared/timeline';
 import type {VideoProps} from '../shared/types';
 import {MapView} from './components/MapView';
+import {SpotMap} from './components/SpotMap';
 import {ThemeProvider, fontFamily, themeFor, useTheme} from './theme';
 
 /** Single-frame thumbnail: photo (or the first rapid country on the map), big title, badge, optional "#episode". */
@@ -27,6 +29,14 @@ function coverContent(video: VideoProps) {
       badge: `${n} rounds · ${video.rapid?.seconds ?? 3}s`,
     };
   }
+  if (video.format === 'spot') {
+    const first = spotPlan(video)[0];
+    return {
+      spot: first,
+      title: (video.spot?.title || "What's wrong with this map?").toUpperCase(),
+      badge: `${video.spot?.rounds.length ?? 5} maps · spot it`,
+    };
+  }
   if (video.format === 'pan') {
     return {photo: video.photos[0], title: (video.pan?.question || 'Do you know this city?').toUpperCase(), badge: 'Comment 👇'};
   }
@@ -36,8 +46,9 @@ function coverContent(video: VideoProps) {
 const CoverFrame: React.FC<VideoProps> = (video) => {
   const {COLORS} = useTheme();
   const c = coverContent(video);
-  const src = c.photo?.src;
-  const focus = c.photo?.focus;
+  const photo = 'photo' in c ? c.photo : undefined;
+  const src = photo?.src;
+  const focus = photo?.focus;
   const pos = `${(focus?.x ?? 0.5) * 100}% ${(focus?.y ?? 0.5) * 100}%`;
   const words = c.title.split(' ');
   const size = c.title.length <= 16 ? 170 : c.title.length <= 26 ? 135 : 110;
@@ -45,7 +56,19 @@ const CoverFrame: React.FC<VideoProps> = (video) => {
   return (
     <AbsoluteFill style={{background: `linear-gradient(160deg, ${COLORS.bg2}, ${COLORS.bg})`, fontFamily, color: COLORS.text}}>
       {src ? <Img src={src} style={{width: '100%', height: '100%', objectFit: 'cover', objectPosition: pos}} /> : null}
-      {!src && c.map ? (
+      {'spot' in c && c.spot ? (
+        <SpotMap
+          camera={cameraForBox(c.spot.view, WIDTH, HEIGHT, 0.8)}
+          width={WIDTH}
+          height={HEIGHT}
+          country={c.spot.country}
+          center={c.spot.center}
+          k={c.spot.scale}
+          highlight={0}
+          frame={0}
+        />
+      ) : null}
+      {!src && 'map' in c && c.map ? (
         <MapView camera={cameraForBox(c.map.view, WIDTH, HEIGHT, 0.8)} width={WIDTH} height={HEIGHT} round={c.map.spec} reveal={0} frame={0} labelsOpacity={0} />
       ) : null}
       {/* Darken top and bottom so the text reads on any photo */}

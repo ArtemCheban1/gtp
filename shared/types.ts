@@ -43,8 +43,24 @@ export type MusicTrack = {
  *   classic — 3 photos, 3 rounds (part of the world → region → exact place)
  *   rapid   — 5–10 quick rounds, one country (highlighted on the map) or photo each
  *   pan     — one photo slowly panned, "Do you know this city?", optional answer at the end
+ *   spot    — "What's wrong with this map?": one country per round is drawn bigger than it is
  */
-export type VideoFormat = 'classic' | 'rapid' | 'pan';
+export type VideoFormat = 'classic' | 'rapid' | 'pan' | 'spot';
+
+export type SpotRound = {
+  /** id from SPOT_AREAS (shared/spot.ts) */
+  area: string;
+  /** world-atlas name of the enlarged country */
+  country: string;
+  /** how much bigger it is drawn, e.g. 1.5 */
+  scale: number;
+};
+
+export type SpotConfig = {
+  title: string;
+  seconds: number;
+  rounds: SpotRound[];
+};
 
 /** One rapid round: a country highlighted on the map, or a photo with a typed answer. */
 export type RapidRound =
@@ -78,6 +94,7 @@ export type VideoProps = {
   episode?: number;
   rapid?: RapidConfig;
   pan?: PanConfig;
+  spot?: SpotConfig;
   photos: [PhotoSlot, PhotoSlot, PhotoSlot];
   place: Place;
   /** Round-3 wrong answers. Missing/empty entries are auto-picked from the city list. */

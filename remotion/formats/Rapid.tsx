@@ -3,7 +3,6 @@ import {
   AbsoluteFill,
   Easing,
   Html5Audio,
-  Img,
   Sequence,
   interpolate,
   spring,
@@ -20,10 +19,11 @@ import {Countdown} from '../components/Countdown';
 import {Intro} from '../components/Intro';
 import {MapView} from '../components/MapView';
 import {Photo} from '../components/Photo';
+import {ScoreOutro} from './ScoreOutro';
 import {fontFamily, useTheme} from '../theme';
 
 /** Rapid layout: big map/photo, timer on its bottom edge, answer under it — all above y=1600. */
-const L = {
+export const STAGE_LAYOUT = {
   header: {y: 70},
   stage: {x: 40, y: 290, w: 1000, h: 1060},
   timer: {cx: 540, cy: 1350, r: 70},
@@ -54,7 +54,12 @@ export const RapidVideo: React.FC<{video: VideoProps}> = ({video}) => {
         </Sequence>
       ))}
       <Sequence from={rapidOutroStart(video)} name="Outro">
-        <RapidOutro video={video} plan={plan} />
+        <ScoreOutro
+          video={video}
+          question="How many did you get?"
+          answers={plan.map((p) => p.label)}
+          bg={firstPhoto && 'src' in firstPhoto ? firstPhoto.src : ''}
+        />
       </Sequence>
     </>
   );
@@ -66,6 +71,7 @@ const RapidRound: React.FC<{video: VideoProps; plan: RapidRoundPlan; total: numb
   const {fps} = useVideoConfig();
   const think = rapidThink(video);
   const revealStart = RT.enter + think;
+  const L = STAGE_LAYOUT;
   const {stage, timer} = L;
   const {round, spec} = plan;
 
@@ -172,64 +178,3 @@ const RapidRound: React.FC<{video: VideoProps; plan: RapidRoundPlan; total: numb
   );
 };
 
-/** Score screen: all answers at a glance (people pause here) + score prompt. */
-const RapidOutro: React.FC<{video: VideoProps; plan: RapidRoundPlan[]}> = ({video, plan}) => {
-  const {COLORS} = useTheme();
-  const frame = useCurrentFrame();
-  const {fps} = useVideoConfig();
-  const s = (delay: number, damping = 14) => spring({frame: frame - delay, fps, config: {damping, stiffness: 150}});
-  const bg = plan.find((p) => p.round.kind === 'photo')?.round;
-  const two = plan.length > 5;
-
-  return (
-    <AbsoluteFill style={{fontFamily, color: COLORS.text, textAlign: 'center'}}>
-      {bg && 'src' in bg && bg.src ? (
-        <Img
-          src={bg.src}
-          style={{position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(36px) brightness(0.35)', transform: 'scale(1.2)'}}
-        />
-      ) : null}
-      <div style={{position: 'absolute', top: 150, left: 0, right: 0}}>
-        <div style={{fontSize: 52, fontWeight: 800, color: COLORS.muted, opacity: s(0)}}>How many did you get?</div>
-        <div style={{fontSize: 170, fontWeight: 900, lineHeight: 1.05, color: COLORS.accent, transform: `scale(${s(5, 10)})`}}>?/{plan.length}</div>
-      </div>
-      <div
-        style={{
-          position: 'absolute',
-          top: 520,
-          left: 70,
-          right: 70,
-          display: 'grid',
-          gridTemplateColumns: two ? '1fr 1fr' : '1fr',
-          gap: '18px 24px',
-        }}
-      >
-        {plan.map((p, i) => (
-          <div
-            key={i}
-            style={{
-              opacity: s(14 + i * 3),
-              transform: `translateY(${(1 - s(14 + i * 3)) * 60}px)`,
-              background: 'rgba(8,16,26,0.75)',
-              border: `3px solid ${COLORS.correct}`,
-              borderRadius: 40,
-              padding: '12px 22px',
-              fontSize: 36,
-              fontWeight: 800,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            <span style={{color: COLORS.correct}}>{i + 1}.</span> {p.label}
-          </div>
-        ))}
-      </div>
-      <div style={{position: 'absolute', top: 1340, left: 60, right: 60, opacity: s(45, 200)}}>
-        <div style={{fontSize: 50, fontWeight: 900}}>Comment your score 👇</div>
-        <div style={{fontSize: 40, fontWeight: 800, color: COLORS.accent, marginTop: 20}}>{video.texts.follow}</div>
-      </div>
-      <Html5Audio src={staticFile('sfx/whoosh.wav')} volume={video.sfxVolume * 0.7} />
-    </AbsoluteFill>
-  );
-};

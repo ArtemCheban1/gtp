@@ -37,6 +37,20 @@ export const rapidRoundFrames = (p: RapidTiming) => RT.enter + rapidThink(p) + R
 export const rapidRoundStart = (p: RapidTiming, i: number) => rapidIntroFrames(p) + i * rapidRoundFrames(p);
 export const rapidOutroStart = (p: RapidTiming) => rapidRoundStart(p, p.rapid?.rounds.length ?? 0);
 
+// ── "What's wrong with this map?" ──
+export const ST = {
+  /** map flies to the next area */
+  enter: 12,
+  /** country flashes, shrinks back to its true size, answer shows */
+  reveal: 60,
+  outro: 120,
+};
+type SpotTiming = {intro?: boolean; spot?: {seconds: number; rounds: unknown[]}};
+export const spotThink = (p: SpotTiming) => Math.round((p.spot?.seconds ?? 6) * FPS);
+export const spotRoundFrames = (p: SpotTiming) => ST.enter + spotThink(p) + ST.reveal;
+export const spotRoundStart = (p: SpotTiming, i: number) => (p.intro ? RT.intro : 0) + i * spotRoundFrames(p);
+export const spotOutroStart = (p: SpotTiming) => spotRoundStart(p, p.spot?.rounds.length ?? 0);
+
 // ── Pan format ──
 /** How long the answer stays on screen at the end of a pan */
 export const PAN_REVEAL = 45;
@@ -46,5 +60,6 @@ export const panFrames = (p: Pick<VideoProps, 'pan'>) => Math.round((p.pan?.seco
 export function videoFrames(p: VideoProps): number {
   if (p.format === 'rapid') return rapidOutroStart(p) + RT.outro;
   if (p.format === 'pan') return panFrames(p);
+  if (p.format === 'spot') return spotOutroStart(p) + ST.outro;
   return totalFrames(p);
 }
