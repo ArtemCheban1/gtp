@@ -7,17 +7,47 @@ import type {VideoProps} from '../shared/types';
 import {Intro} from './components/Intro';
 import {Outro} from './components/Outro';
 import {Round} from './components/Round';
+import {PanVideo} from './formats/Pan';
+import {RapidVideo} from './formats/Rapid';
 import {ThemeProvider, fontFamily, themeFor, useTheme} from './theme';
 
 export const GuessThePlace: React.FC<VideoProps> = (video) => (
   <ThemeProvider value={themeFor(video.theme)}>
-    <Reel {...video} />
+    {video.format === 'rapid' || video.format === 'pan' ? <OtherFormat {...video} /> : <Reel {...video} />}
   </ThemeProvider>
 );
 
+/** Rapid / pan formats share the background and the music bed with the classic reel. */
+const OtherFormat: React.FC<VideoProps> = (video) => {
+  const {COLORS} = useTheme();
+  return (
+    <AbsoluteFill style={{background: `radial-gradient(circle at 50% 30%, ${COLORS.bg2}, ${COLORS.bg})`}}>
+      {video.format === 'rapid' ? <RapidVideo video={video} /> : <PanVideo video={video} />}
+      <Music video={video} />
+    </AbsoluteFill>
+  );
+};
+
+const Music: React.FC<{video: VideoProps}> = ({video}) => {
+  const {durationInFrames} = useVideoConfig();
+  if (!video.music?.src) return null;
+  return (
+    <Html5Audio
+      src={video.music.src}
+      loop
+      volume={(f) =>
+        video.music!.volume *
+        interpolate(f, [0, 15, durationInFrames - 45, durationInFrames], [0, 1, 1, 0], {
+          extrapolateLeft: 'clamp',
+          extrapolateRight: 'clamp',
+        })
+      }
+    />
+  );
+};
+
 const Reel: React.FC<VideoProps> = (video) => {
   const {COLORS} = useTheme();
-  const {durationInFrames} = useVideoConfig();
   const plan = useMemo(() => buildPlan(video), [video]);
 
   if ('error' in plan) {
@@ -41,19 +71,7 @@ const Reel: React.FC<VideoProps> = (video) => {
       <Sequence from={outroStart(video)} name="Outro">
         <Outro video={video} rounds={plan.rounds} />
       </Sequence>
-      {video.music?.src ? (
-        <Html5Audio
-          src={video.music.src}
-          loop
-          volume={(f) =>
-            video.music!.volume *
-            interpolate(f, [0, 15, durationInFrames - 45, durationInFrames], [0, 1, 1, 0], {
-              extrapolateLeft: 'clamp',
-              extrapolateRight: 'clamp',
-            })
-          }
-        />
-      ) : null}
+      <Music video={video} />
     </AbsoluteFill>
   );
 };

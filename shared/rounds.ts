@@ -76,7 +76,7 @@ export function effectiveDecoys(props: VideoProps, subId: string): Place[] {
 }
 
 /** Box that tightly frames all round-3 pins (handles the antimeridian). */
-function framePoints(points: LonLat[]): BBox {
+export function framePoints(points: LonLat[]): BBox {
   const ref = points[0][0];
   const lons = points.map(([lon]) => (lon - ref > 180 ? lon - 360 : lon - ref < -180 ? lon + 360 : lon));
   const lats = points.map(([, lat]) => lat);

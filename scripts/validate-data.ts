@@ -1,3 +1,5 @@
+import {countryInfos} from '../shared/geo/countries';
+import {RAPID_EASY, RAPID_MEDIUM} from '../shared/rapid';
 /**
  * Sanity checks for shared/geo data. Run: npm run validate-data
  *  - every country in the map belongs to a subregion
@@ -52,6 +54,13 @@ for (const s of SUBREGIONS) {
   const n = citiesInSub(s.id).length;
   if (n < 6) fail(`subregion ${s.id} has only ${n} cities (need ≥ 6 for good decoys)`);
   else console.log(`✓ ${s.id.padEnd(11)} ${n} cities`);
+}
+
+// Rapid-format difficulty lists must use world-atlas names
+{
+  const names = new Set(countryInfos().map((c) => c.name));
+  for (const n of [...RAPID_EASY, ...RAPID_MEDIUM]) if (!names.has(n)) fail(`rapid list: "${n}" is not a world-atlas country name`);
+  console.log(`✓ rapid lists  ${RAPID_EASY.length} easy, ${RAPID_MEDIUM.length} medium`);
 }
 
 console.log(problems ? `\n${problems} problem(s)` : '\nAll good');

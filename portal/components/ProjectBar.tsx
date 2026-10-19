@@ -20,7 +20,11 @@ export const ProjectBar: React.FC<Props> = ({props, onLoad, onNew}) => {
 
   const save = async () => {
     try {
-      const {id} = await saveProject(props.place.name, props);
+      const name =
+        props.format === 'rapid'
+          ? `${props.rapid?.title || 'Guess the Country'}${props.episode ? ` ${props.episode}` : ''}`
+          : `${props.place.name}${props.format === 'pan' ? ' pan' : ''}`;
+      const {id} = await saveProject(name, props);
       setMsg(`Saved as "${id}"`);
       refresh();
     } catch (e) {

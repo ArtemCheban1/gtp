@@ -38,8 +38,44 @@ export type MusicTrack = {
   volume: number;
 };
 
+/**
+ * Video formats:
+ *   classic — 3 photos, 3 rounds (part of the world → region → exact place)
+ *   rapid   — 5–10 quick rounds, one country (highlighted on the map) or photo each
+ *   pan     — one photo slowly panned, "Do you know this city?", optional answer at the end
+ */
+export type VideoFormat = 'classic' | 'rapid' | 'pan';
+
+/** One rapid round: a country highlighted on the map, or a photo with a typed answer. */
+export type RapidRound =
+  | {kind: 'country'; /** world-atlas name */ country: string}
+  | ({kind: 'photo'; /** What is revealed, e.g. "Paris" */ answer: string} & PhotoSlot);
+
+export type RapidConfig = {
+  /** Intro title, e.g. "Guess the Country" */
+  title: string;
+  rounds: RapidRound[];
+  /** Thinking time per round */
+  seconds: number;
+  difficulty: 'mixed' | 'easy' | 'medium' | 'hard';
+};
+
+export type PanConfig = {
+  seconds: number;
+  /** Text on top, e.g. "Do you know this city?" */
+  question: string;
+  /** Show the answer for the last ~1.5 s (off = answer only in the comments/caption) */
+  reveal: boolean;
+};
+
 /** Everything the video needs. This is the Remotion inputProps and the portal "project" format. */
 export type VideoProps = {
+  /** Default 'classic' (projects saved before formats existed) */
+  format?: VideoFormat;
+  /** Episode number shown in titles/cover/caption ("#12"); unset = none */
+  episode?: number;
+  rapid?: RapidConfig;
+  pan?: PanConfig;
   photos: [PhotoSlot, PhotoSlot, PhotoSlot];
   place: Place;
   /** Round-3 wrong answers. Missing/empty entries are auto-picked from the city list. */
@@ -52,7 +88,7 @@ export type VideoProps = {
   sfxVolume: number;
   /** Optional voice-over played on each reveal ("It's Oceania!"); one clip per round, null = silent. */
   voice?: {clips: (VoiceClip | null)[]; volume: number};
-  /** Index into CAPTION_STYLES (shared/caption.ts); unset = picked from the seed. */
+  /** Index into the format's caption styles (shared/caption.ts); unset = picked from the seed. */
   captionStyle?: number;
   /** What round 3 asks for: 4 cities (default) or 4 countries of the region. */
   round3?: 'cities' | 'countries';

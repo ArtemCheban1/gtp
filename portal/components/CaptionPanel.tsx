@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {CAPTION_STYLES, buildCaption, defaultCaptionStyle} from '../../shared/caption';
+import {buildCaption, captionStyles, defaultCaptionStyle} from '../../shared/caption';
 import type {VideoProps} from '../../shared/types';
 import {getPublish, listRenders, publishConfig, startPublish, type PublishResult, type PublishTarget} from '../api';
 
@@ -7,10 +7,11 @@ const LABEL: Record<PublishTarget, string> = {facebook: 'Facebook Reel', instagr
 
 /** Ready-to-paste post text with hashtags, and one-click publishing when Meta tokens are set up. */
 export const CaptionPanel: React.FC<{props: VideoProps; update: (patch: Partial<VideoProps>) => void}> = ({props, update}) => {
-  const style = props.captionStyle ?? defaultCaptionStyle(props);
+  const styles = captionStyles(props.format);
+  const style = (props.captionStyle ?? defaultCaptionStyle(props)) % styles.length;
   const generated = useMemo(() => buildCaption(props, style), [props, style]);
   const setStyle = (i: number) => {
-    update({captionStyle: (i + CAPTION_STYLES.length) % CAPTION_STYLES.length});
+    update({captionStyle: (i + styles.length) % styles.length});
     setEdited(null);
   };
   const [edited, setEdited] = useState<string | null>(null);
@@ -87,7 +88,7 @@ export const CaptionPanel: React.FC<{props: VideoProps; update: (patch: Partial<
           ←
         </button>
         <select className="grow" value={style} onChange={(e) => setStyle(Number(e.target.value))}>
-          {CAPTION_STYLES.map((s, i) => (
+          {styles.map((s, i) => (
             <option key={i} value={i}>
               {i + 1}. {s.name}
             </option>

@@ -116,6 +116,7 @@ export const PlacePicker: React.FC<Props> = ({props, plan, update}) => {
         <small className="hint">Click to set the coordinates (handy for places without a name). Then type the name above.</small>
       </details>
 
+      {props.format === 'pan' ? null : (
       <div className="row">
         <label className="grow">
           Region (round 2 answer)
@@ -133,6 +134,7 @@ export const PlacePicker: React.FC<Props> = ({props, plan, update}) => {
           </select>
         </label>
       </div>
+      )}
 
       {detected ? (
         <p className="path">

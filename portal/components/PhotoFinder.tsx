@@ -4,9 +4,13 @@ import {importPhoto, photoSources, searchPhotos, type FoundPhoto, type PhotoSour
 
 type Props = {
   place: Place;
-  /** Puts a downloaded photo into slot i */
+  /** Buttons under each photo (default: rounds 1–3); clicking one calls onUse with its index */
+  targets?: {label: string; title: string}[];
+  /** Puts a downloaded photo into target i */
   onUse: (i: number, slot: PhotoSlot) => void;
 };
+
+const ROUND_TARGETS = [0, 1, 2].map((i) => ({label: String(i + 1), title: `Use for round ${i + 1}`}));
 
 const NAMES: Record<PhotoSource, string> = {
   wikimedia: 'Wikimedia Commons',
@@ -18,7 +22,7 @@ const NAMES: Record<PhotoSource, string> = {
 const ORDER: PhotoSource[] = ['wikimedia', 'openverse', 'mapillary', 'pexels', 'pixabay'];
 
 /** Searches free-licence photos around the answer; one click downloads a photo into a slot with its credit. */
-export const PhotoFinder: React.FC<Props> = ({place, onUse}) => {
+export const PhotoFinder: React.FC<Props> = ({place, targets = ROUND_TARGETS, onUse}) => {
   const [sources, setSources] = useState<Record<PhotoSource, boolean>>({
     wikimedia: true,
     openverse: true,
@@ -74,7 +78,7 @@ export const PhotoFinder: React.FC<Props> = ({place, onUse}) => {
     <section className="card">
       <h2>Find photos</h2>
       <p className="hint">
-        Free-licence photos (commercial use allowed). Pick one for round 1, 2 or 3 — the author and licence go into the caption
+        Free-licence photos (commercial use allowed). Pick one with the buttons under it — the author and licence go into the caption
         automatically. Check the licence page if unsure.
         {enabled.length < ORDER.length ? ' Mapillary, Pexels and Pixabay need a free key in .env (see server/photos.ts).' : ''}
       </p>
@@ -110,9 +114,9 @@ export const PhotoFinder: React.FC<Props> = ({place, onUse}) => {
               </a>
               <figcaption title={p.credit}>{p.credit}</figcaption>
               <div className="row tight">
-                {[0, 1, 2].map((i) => (
-                  <button key={i} disabled={!!importing} onClick={() => use(p, i)} title={`Use for round ${i + 1}`}>
-                    {importing === `${p.id}-${i}` ? '…' : i + 1}
+                {targets.map((t, i) => (
+                  <button key={i} disabled={!!importing} onClick={() => use(p, i)} title={t.title}>
+                    {importing === `${p.id}-${i}` ? '…' : t.label}
                   </button>
                 ))}
               </div>

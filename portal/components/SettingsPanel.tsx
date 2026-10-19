@@ -10,6 +10,7 @@ type Props = {
 
 export const SettingsPanel: React.FC<Props> = ({props, update}) => {
   const [busy, setBusy] = useState(false);
+  const classic = !props.format || props.format === 'classic';
   const setText = (k: keyof VideoProps['texts'], v: string) => update({texts: {...props.texts, [k]: v}});
 
   const uploadMusic = async (file?: File) => {
@@ -24,8 +25,19 @@ export const SettingsPanel: React.FC<Props> = ({props, update}) => {
 
   return (
     <section className="card">
-      <h2>4 · Timing, sound &amp; text</h2>
+      <h2>{classic ? '4' : props.format === 'pan' ? '4' : '2'} · {classic ? 'Timing, sound & text' : 'Sound, look & text'}</h2>
       <div className="grid2">
+        <label>
+          Episode number (shown as “#12” in the title, cover and caption)
+          <input
+            type="number"
+            min={1}
+            placeholder="none"
+            value={props.episode ?? ''}
+            onChange={(e) => update({episode: e.target.value ? Math.max(1, Math.round(Number(e.target.value))) : undefined})}
+          />
+        </label>
+        {classic ? (
         <label>
           Thinking time per round: <b>{props.thinkSeconds} s</b>
           <input
@@ -36,6 +48,7 @@ export const SettingsPanel: React.FC<Props> = ({props, update}) => {
             onChange={(e) => update({thinkSeconds: Number(e.target.value)})}
           />
         </label>
+        ) : null}
         <label>
           Ticking &amp; chime volume: <b>{Math.round(props.sfxVolume * 100)}%</b>
           <input
@@ -81,14 +94,18 @@ export const SettingsPanel: React.FC<Props> = ({props, update}) => {
         </label>
       </div>
       <div className="grid2">
-        <label>
-          Intro title
-          <input value={props.texts.title} onChange={(e) => setText('title', e.target.value)} />
-        </label>
-        <label>
-          Ending question
-          <input value={props.texts.cta} onChange={(e) => setText('cta', e.target.value)} />
-        </label>
+        {classic ? (
+          <>
+            <label>
+              Intro title
+              <input value={props.texts.title} onChange={(e) => setText('title', e.target.value)} />
+            </label>
+            <label>
+              Ending question
+              <input value={props.texts.cta} onChange={(e) => setText('cta', e.target.value)} />
+            </label>
+          </>
+        ) : null}
         <label className="span2">
           Follow line
           <input value={props.texts.follow} onChange={(e) => setText('follow', e.target.value)} />

@@ -1,7 +1,7 @@
 import React from 'react';
 import {Composition} from 'remotion';
 import {DEFAULT_PROPS} from '../shared/defaults';
-import {FPS, HEIGHT, WIDTH, totalFrames} from '../shared/timeline';
+import {FPS, HEIGHT, WIDTH, videoFrames} from '../shared/timeline';
 import type {VideoProps} from '../shared/types';
 import {Cover} from './Cover';
 import {GuessThePlace} from './GuessThePlace';
@@ -17,9 +17,9 @@ export const RemotionRoot: React.FC = () => (
       width={WIDTH}
       height={HEIGHT}
       fps={FPS}
-      durationInFrames={totalFrames(DEFAULT_PROPS)}
+      durationInFrames={videoFrames(DEFAULT_PROPS)}
       defaultProps={DEFAULT_PROPS}
-      calculateMetadata={({props}: {props: VideoProps}) => ({durationInFrames: totalFrames(props)})}
+      calculateMetadata={({props}: {props: VideoProps}) => ({durationInFrames: videoFrames(props)})}
     />
     <Composition id={COVER_ID} component={Cover} width={WIDTH} height={HEIGHT} fps={FPS} durationInFrames={1} defaultProps={DEFAULT_PROPS} />
   </>

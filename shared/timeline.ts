@@ -19,3 +19,29 @@ export const roundFrames = (p: Pick<VideoProps, 'thinkSeconds'>) => T.enter + th
 export const roundStart = (p: Pick<VideoProps, 'thinkSeconds'>, i: number) => T.intro + i * roundFrames(p);
 export const outroStart = (p: Pick<VideoProps, 'thinkSeconds'>) => roundStart(p, 3);
 export const totalFrames = (p: Pick<VideoProps, 'thinkSeconds'>) => outroStart(p) + T.outro;
+
+// ── Rapid format ──
+export const RT = {
+  intro: 45,
+  /** map flies / photo slides to the next round */
+  enter: 9,
+  reveal: 33,
+  outro: 120,
+};
+type RapidTiming = {rapid?: {seconds: number; rounds: unknown[]}};
+export const rapidThink = (p: RapidTiming) => Math.round((p.rapid?.seconds ?? 3) * FPS);
+export const rapidRoundFrames = (p: RapidTiming) => RT.enter + rapidThink(p) + RT.reveal;
+export const rapidRoundStart = (p: RapidTiming, i: number) => RT.intro + i * rapidRoundFrames(p);
+export const rapidOutroStart = (p: RapidTiming) => rapidRoundStart(p, p.rapid?.rounds.length ?? 0);
+
+// ── Pan format ──
+/** How long the answer stays on screen at the end of a pan */
+export const PAN_REVEAL = 45;
+export const panFrames = (p: Pick<VideoProps, 'pan'>) => Math.round((p.pan?.seconds ?? 8) * FPS);
+
+/** Length of any format. */
+export function videoFrames(p: VideoProps): number {
+  if (p.format === 'rapid') return rapidOutroStart(p) + RT.outro;
+  if (p.format === 'pan') return panFrames(p);
+  return totalFrames(p);
+}

@@ -192,7 +192,10 @@ const toInputProps = (props: VideoProps): VideoProps => ({
   music: props.music ? {...props.music, src: absolutize(props.music.src)} : null,
   voice: props.voice ? {...props.voice, clips: props.voice.clips.map((c) => (c ? {...c, src: absolutize(c.src)} : null))} : undefined,
 });
-const outName = (props: VideoProps) => `${slug(props.place.name)}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}`;
+/** Human name of a project: the place, or the rapid title + episode ("Guess the Country 12"). */
+const nameOf = (props: VideoProps) =>
+  props.format === 'rapid' ? `${props.rapid?.title || 'Guess the Country'}${props.episode ? ` ${props.episode}` : ''}` : props.place.name;
+const outName = (props: VideoProps) => `${slug(`${nameOf(props)}${props.format === 'pan' ? ' pan' : ''}`)}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}`;
 
 // Renders are heavy (they use every CPU core), so they run one at a time in submission order.
 let queueTail: Promise<void> = Promise.resolve();
@@ -222,7 +225,7 @@ async function runRender(job: Job, props: VideoProps) {
   console.log(`✓ Rendered out/${file}`);
 }
 
-function enqueueRender(props: VideoProps, label = props.place.name): string {
+function enqueueRender(props: VideoProps, label = nameOf(props)): string {
   const id = randomUUID().slice(0, 8);
   const job: Job = {status: 'queued', progress: 0, label, created: Date.now()};
   jobs.set(id, job);
@@ -380,7 +383,7 @@ app.get('/api/projects/:id', (req, res) => {
 
 app.post('/api/projects', (req, res) => {
   const props = req.body.props as VideoProps;
-  const id = slug(req.body.name || props.place.name);
+  const id = slug(req.body.name || nameOf(props));
   writeFileSync(path.join(PROJECTS, `${id}.json`), JSON.stringify(props, null, 2));
   res.json({id});
 });

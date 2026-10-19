@@ -7,11 +7,13 @@ type Props = {
   photos: Photos;
   /** Functional update: several uploads can finish at the same time. */
   onChange: (update: (photos: Photos) => Photos) => void;
+  /** How many slots to show (pan format uses 1) */
+  count?: number;
 };
 
 const TIPS = ['Hardest: few clues', 'Medium: narrows it down', 'Easiest: almost gives it away'];
 
-export const PhotoSlots: React.FC<Props> = ({photos, onChange}) => {
+export const PhotoSlots: React.FC<Props> = ({photos, onChange, count = 3}) => {
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState('');
 
@@ -40,10 +42,14 @@ export const PhotoSlots: React.FC<Props> = ({photos, onChange}) => {
 
   return (
     <section className="card">
-      <h2>2 · Photos</h2>
-      <p className="hint">One photo per round. Go from vague to obvious. Drop a file on a slot or click it.</p>
+      <h2>2 · {count > 1 ? 'Photos' : 'Photo'}</h2>
+      <p className="hint">
+        {count > 1
+          ? 'One photo per round. Go from vague to obvious. Drop a file on a slot or click it.'
+          : 'A wide (landscape) photo works best — the video pans across it, centred on the focus point.'}
+      </p>
       <div className="photos">
-        {photos.map((p, i) => (
+        {photos.slice(0, count).map((p, i) => (
           <div key={i} className="photo-slot">
             <label
               className={`drop ${busy === i ? 'busy' : ''}`}
@@ -75,11 +81,11 @@ export const PhotoSlots: React.FC<Props> = ({photos, onChange}) => {
                   />
                 </>
               ) : (
-                <span>{busy === i ? 'Uploading…' : `Round ${i + 1}`}</span>
+                <span>{busy === i ? 'Uploading…' : count > 1 ? `Round ${i + 1}` : 'Photo'}</span>
               )}
               <input type="file" accept="image/*" hidden onChange={(e) => upload(i, e.target.files?.[0])} />
             </label>
-            <small>{TIPS[i]}{p.src ? ' · click photo to set focus' : ''}</small>
+            <small>{count > 1 ? TIPS[i] : 'The photo'}{p.src ? ' · click photo to set focus' : ''}</small>
             <input placeholder="Optional hint text" value={p.caption ?? ''} onChange={(e) => set(i, {caption: e.target.value})} />
             <input
               placeholder="Credit (author, licence) — goes into the caption"
@@ -94,7 +100,7 @@ export const PhotoSlots: React.FC<Props> = ({photos, onChange}) => {
               <button disabled={!p.src} onClick={() => set(i, {src: '', focus: undefined, credit: undefined, sourceUrl: undefined})}>
                 Remove
               </button>
-              <button disabled={i === 2} onClick={() => swap(i, i + 1)} title="Move later">
+              <button disabled={i === count - 1} onClick={() => swap(i, i + 1)} title="Move later">
                 →
               </button>
             </div>

@@ -1,4 +1,5 @@
-import type {VideoProps} from './types';
+import {countryLabel} from './geo/countries';
+import type {PhotoSlot, VideoFormat, VideoProps} from './types';
 
 const tag = (s: string) =>
   '#' +
@@ -8,16 +9,23 @@ const tag = (s: string) =>
     .replace(/[^A-Za-z0-9]+/g, '')
     .toLowerCase();
 
+/** Photos used by the current format (rapid: its photo rounds; pan: the first photo). */
+function usedPhotos(props: VideoProps): PhotoSlot[] {
+  if (props.format === 'rapid') return (props.rapid?.rounds ?? []).flatMap((r) => (r.kind === 'photo' ? [r] : []));
+  if (props.format === 'pan') return props.photos.slice(0, 1);
+  return props.photos;
+}
+
 /** "📷 Photos: …" line for photos that carry a credit (required by CC BY / CC BY-SA). */
 function credits(props: VideoProps): string[] {
-  const list = [...new Set(props.photos.map((p) => p.credit?.trim()).filter((c): c is string => !!c))];
+  const list = [...new Set(usedPhotos(props).map((p) => p.credit?.trim()).filter((c): c is string => !!c))];
   return list.length ? ['', `📷 Photos: ${list.join('; ')}`] : [];
 }
 
 type Style = {
   name: string;
   /** Lines above the fold: hook + call to comment. `cta` is the ending question from the video settings. */
-  intro: (s: {seconds: number; cta: string}) => string[];
+  intro: (s: {seconds: number; cta: string; rounds: number}) => string[];
   /** Line right before the hidden answer */
   spoiler: string;
   /** Extra hashtags on top of the common ones */
@@ -87,35 +95,120 @@ export const CAPTION_STYLES: Style[] = [
   },
 ];
 
+export const RAPID_STYLES: Style[] = [
+  {
+    name: 'Score /N',
+    intro: ({rounds, seconds}) => [`🌍 ${rounds} countries, ${seconds} seconds each. How many can you name?`, '', 'Comment your score 👇'],
+    spoiler: 'All answers below ⬇️',
+    tags: ['#guessthecountry', '#mapquiz'],
+  },
+  {
+    name: 'No pausing',
+    intro: ({rounds}) => [`Name all ${rounds} countries without pausing ⏱️`, '', 'Be honest — what did you get? 😅'],
+    spoiler: 'Answers (no cheating!) ⬇️',
+    tags: ['#geographyquiz', '#countries'],
+  },
+  {
+    name: 'Easy → impossible',
+    intro: () => ['It starts easy… the last ones are brutal 😈', '', 'At which round did you lose? Tell me 👇'],
+    spoiler: 'The answers ⬇️',
+    tags: ['#mapquiz', '#geographychallenge'],
+  },
+  {
+    name: 'Perfect score?',
+    intro: ({rounds}) => [`Only 1% get ${rounds}/${rounds} 🏆`, '', 'Did you? Prove it in the comments 👇'],
+    spoiler: 'Check your answers ⬇️',
+    tags: ['#guessthecountry', '#brainteaser'],
+  },
+  {
+    name: 'Map nerds',
+    intro: () => ['Calling all map nerds 🗺️', '', 'Name the highlighted country before the timer hits 0!', 'Comment your score 👇'],
+    spoiler: 'Answers ⬇️',
+    tags: ['#mapnerd', '#maps'],
+  },
+  {
+    name: 'Daily rapid',
+    intro: ({rounds}) => [`Daily rapid round — ${rounds} countries ⚡`, '', 'Tag a friend and compare scores 👯'],
+    spoiler: "Today's answers ⬇️",
+    tags: ['#dailyquiz', '#geographyquiz'],
+  },
+];
+
+export const PAN_STYLES: Style[] = [
+  {
+    name: 'Do you know it?',
+    intro: () => ['Do you know this city? 🏙️', '', 'Comment your guess 👇'],
+    spoiler: 'Answer below — no peeking 🙈',
+    tags: ['#guessthecity', '#citylife'],
+  },
+  {
+    name: 'Locals only',
+    intro: () => ['Only locals will recognise this place 👀', '', 'Where is it? Drop your guess 👇'],
+    spoiler: 'Answer ⬇️',
+    tags: ['#guessthecity', '#hiddengems'],
+  },
+  {
+    name: 'Been here?',
+    intro: () => ['Have you been here? 📍', '', 'Comment the city — first correct answer gets pinned 📌'],
+    spoiler: 'The answer ⬇️',
+    tags: ['#travelgram', '#bucketlist'],
+  },
+  {
+    name: 'One look',
+    intro: () => ['One look — can you name the city? 🤔', '', 'Answers in the comments 👇'],
+    spoiler: 'Scroll for the answer ⬇️',
+    tags: ['#guesswhere', '#cityview'],
+  },
+  {
+    name: 'Next trip',
+    intro: () => ['Your next trip? ✈️ But first — where is this?', '', 'Comment your guess 👇'],
+    spoiler: 'Answer for the curious ⬇️',
+    tags: ['#wanderlust', '#travelinspo'],
+  },
+  {
+    name: 'Daily city',
+    intro: () => ['Daily city challenge 🌍', '', 'Name it in the comments 👇', 'Follow for a new one every day'],
+    spoiler: "Today's answer ⬇️",
+    tags: ['#dailyquiz', '#guessthecity'],
+  },
+];
+
+/** Caption styles available for a format. */
+export const captionStyles = (format: VideoFormat | undefined): Style[] =>
+  format === 'rapid' ? RAPID_STYLES : format === 'pan' ? PAN_STYLES : CAPTION_STYLES;
+
 /** Style used when the project has none saved: varies with the seed so posts don't all look the same. */
-export const defaultCaptionStyle = (props: Pick<VideoProps, 'seed'>) => Math.abs(props.seed) % CAPTION_STYLES.length;
+export const defaultCaptionStyle = (props: Pick<VideoProps, 'seed' | 'format'>) =>
+  Math.abs(props.seed) % captionStyles(props.format).length;
 
 /**
  * Post text (English) for the reel. Instagram/Facebook have no spoiler markup, so the answer
  * is pushed below the "…more" fold with dot lines and doesn't spoil the video in the feed.
  */
 export function buildCaption(props: VideoProps, styleIndex = props.captionStyle ?? defaultCaptionStyle(props)): string {
-  const style = CAPTION_STYLES[((styleIndex % CAPTION_STYLES.length) + CAPTION_STYLES.length) % CAPTION_STYLES.length];
+  const styles = captionStyles(props.format);
+  const style = styles[((styleIndex % styles.length) + styles.length) % styles.length];
   const {place} = props;
+  const rapid = props.format === 'rapid';
   const tags = ['#geography', '#geoguessr', '#travel', '#guesstheplace', '#quiz', ...style.tags];
-  if (place.country) tags.push(tag(place.country));
-  if (place.name && place.name !== place.country) tags.push(tag(place.name));
+  if (!rapid) {
+    if (place.country) tags.push(tag(place.country));
+    if (place.name && place.name !== place.country) tags.push(tag(place.name));
+  }
 
-  const intro = style.intro({seconds: props.thinkSeconds, cta: props.texts.cta.trim()});
+  const rounds = props.rapid?.rounds ?? [];
+  const intro = style.intro({
+    seconds: rapid ? props.rapid?.seconds ?? 3 : props.thinkSeconds,
+    cta: props.texts.cta.trim(),
+    rounds: rounds.length,
+  });
   while (intro.length && !intro[intro.length - 1]) intro.pop(); // empty ending question
+  // "Ep. 12" rather than "#12", which Instagram would turn into a hashtag
+  if (props.episode && intro.length) intro[0] = `Ep. ${props.episode} · ${intro[0]}`;
 
-  return [
-    ...intro,
-    '',
-    style.spoiler,
-    '.',
-    '.',
-    '.',
-    '.',
-    '.',
-    `✅ ${place.name}${place.country && place.country !== place.name ? `, ${place.country}` : ''}`,
-    ...credits(props),
-    '',
-    [...new Set(tags)].join(' '),
-  ].join('\n');
+  const answer = rapid
+    ? rounds.map((r, i) => `${i + 1}. ${r.kind === 'country' ? countryLabel(r.country) : r.answer || '?'}`)
+    : [`✅ ${place.name}${place.country && place.country !== place.name ? `, ${place.country}` : ''}`];
+
+  return [...intro, '', style.spoiler, '.', '.', '.', '.', '.', ...answer, ...credits(props), '', [...new Set(tags)].join(' ')].join('\n');
 }
