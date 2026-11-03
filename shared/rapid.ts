@@ -91,6 +91,22 @@ function countryView(c: CountryInfo): BBox {
   return [cx - lonHalf, Math.max(cy - latHalf, -78), cx + lonHalf, Math.min(cy + latHalf, 82)];
 }
 
+/** MapView spec that highlights one country in its surroundings (also used by other formats' locator maps). */
+export function countryMapSpec(c: CountryInfo): {spec: RoundSpec; label: string} {
+  const label = countryLabel(c.name);
+  return {
+    label,
+    spec: {
+      index: 2,
+      question: 'Name this country',
+      view: countryView(c),
+      kind: 'countries',
+      options: [{letter: 'A', label, regionId: c.name, point: c.center, correct: true}],
+      answerLabel: label,
+    },
+  };
+}
+
 export function rapidPlan(props: VideoProps): RapidRoundPlan[] {
   const rounds = props.rapid?.rounds ?? [];
   let view: BBox = WORLD_VIEW;
@@ -98,16 +114,8 @@ export function rapidPlan(props: VideoProps): RapidRoundPlan[] {
     if (round.kind === 'photo') return {index, label: round.answer || '?', view, round};
     const c = countryInfo(round.country);
     if (!c?.sub) return {index, label: countryLabel(round.country), view, round};
-    view = countryView(c);
-    const label = countryLabel(c.name);
-    const spec: RoundSpec = {
-      index: 2,
-      question: 'Name this country',
-      view,
-      kind: 'countries',
-      options: [{letter: 'A', label, regionId: c.name, point: c.center, correct: true}],
-      answerLabel: label,
-    };
+    const {spec, label} = countryMapSpec(c);
+    view = spec.view;
     return {index, label, view, spec, round};
   });
 }

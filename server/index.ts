@@ -1,6 +1,7 @@
 /**
  * Local API for the portal:
  *   POST /api/upload           photo / music upload  → {url: "/uploads/…"}
+ *   GET  /api/music            uploaded music tracks (the library the portal picks from)
  *   GET  /api/geocode?q=        place search via OpenStreetMap Nominatim
  *   GET  /api/photos/search     free-licence photos (?source&lat&lon&q&near=0|1)
  *   POST /api/photos/import     download a found photo into uploads → {url}
@@ -61,7 +62,12 @@ const slug = (s: string) =>
 const upload = multer({
   storage: multer.diskStorage({
     destination: UPLOADS,
-    filename: (_, file, cb) => cb(null, `${Date.now()}-${randomUUID().slice(0, 8)}${path.extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, '')}`),
+    // keep a readable part of the original name (the music library shows it)
+    filename: (_, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, '');
+      const base = slug(path.basename(file.originalname, path.extname(file.originalname))).slice(0, 30);
+      cb(null, `${Date.now()}-${randomUUID().slice(0, 8)}${base ? `-${base}` : ''}${ext}`);
+    },
   }),
   limits: {fileSize: 60 * 1024 * 1024},
   fileFilter: (_, file, cb) => cb(null, /^(image|audio)\//.test(file.mimetype)),
@@ -73,6 +79,16 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
     return;
   }
   res.json({url: `/uploads/${req.file.filename}`});
+});
+
+// ── Music library: every uploaded audio file except generated voice clips ──
+const AUDIO = /\.(mp3|wav|m4a|aac|ogg|oga|flac|opus|webm)$/i;
+app.get('/api/music', (_, res) => {
+  const tracks = readdirSync(UPLOADS)
+    .filter((f) => AUDIO.test(f) && !f.startsWith('voice-'))
+    .map((f) => ({url: `/uploads/${f}`, name: f.replace(/^\d+-[0-9a-f]{8}-?/, '') || f, time: statSync(path.join(UPLOADS, f)).mtimeMs}))
+    .sort((a, b) => b.time - a.time);
+  res.json(tracks);
 });
 
 // ── Geocoding (server-side so we can send the User-Agent Nominatim requires) ──
@@ -197,6 +213,8 @@ const nameOf = (props: VideoProps) => {
   const ep = props.episode ? ` ${props.episode}` : '';
   if (props.format === 'rapid') return `${props.rapid?.title || 'Guess the Country'}${ep}`;
   if (props.format === 'spot') return `${props.spot?.title || "What's wrong with this map"}${ep}`;
+  if (props.format === 'outline') return `${props.outline?.title || 'Guess before 100'}${ep}`;
+  if (props.format === 'versus') return `${props.versus?.title || 'Which is bigger'}${ep}`;
   return props.place.name;
 };
 const outName = (props: VideoProps) => `${slug(`${nameOf(props)}${props.format === 'pan' ? ' pan' : ''}`)}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}`;

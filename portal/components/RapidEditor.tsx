@@ -6,10 +6,12 @@ import {uploadFile} from '../api';
 type Props = {
   props: VideoProps;
   update: (patch: Partial<VideoProps>) => void;
+  /** New content was generated/picked — the app may give the video a fresh look */
+  onNewContent?: () => void;
 };
 
 /** Rapid format: 5–10 quick rounds. Countries are picked automatically; any round can become a photo. */
-export const RapidEditor: React.FC<Props> = ({props, update}) => {
+export const RapidEditor: React.FC<Props> = ({props, update, onNewContent}) => {
   const cfg = props.rapid ?? defaultRapid(props.seed);
   const choices = useMemo(rapidCountryChoices, []);
   const [busy, setBusy] = useState<number | null>(null);
@@ -24,6 +26,7 @@ export const RapidEditor: React.FC<Props> = ({props, update}) => {
     const picks = pickRapidCountries(seed, next.rounds.length, next.difficulty);
     const rounds = next.rounds.map((r, i): RapidRound => (r.kind === 'country' ? {kind: 'country', country: picks[i] ?? r.country} : r));
     update({seed, rapid: {...next, rounds}});
+    onNewContent?.();
   };
 
   const setCount = (n: number) => {

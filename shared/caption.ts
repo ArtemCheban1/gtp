@@ -1,4 +1,5 @@
 import {countryLabel} from './geo/countries';
+import {versusAnswer, versusPlan} from './versus';
 import type {PhotoSlot, VideoFormat, VideoProps} from './types';
 
 const tag = (s: string) =>
@@ -13,7 +14,7 @@ const tag = (s: string) =>
 function usedPhotos(props: VideoProps): PhotoSlot[] {
   if (props.format === 'rapid') return (props.rapid?.rounds ?? []).flatMap((r) => (r.kind === 'photo' ? [r] : []));
   if (props.format === 'pan') return props.photos.slice(0, 1);
-  if (props.format === 'spot') return [];
+  if (props.format === 'spot' || props.format === 'outline' || props.format === 'versus') return [];
   return props.photos;
 }
 
@@ -213,9 +214,97 @@ export const SPOT_STYLES: Style[] = [
   },
 ];
 
+export const OUTLINE_STYLES: Style[] = [
+  {
+    name: 'Before 100%',
+    intro: ({rounds}) => [`✏️ Name the country before the outline is finished — ${rounds} countries`, '', 'At what % did you get each one? 👇'],
+    spoiler: 'Answers below ⬇️',
+    tags: ['#guessthecountry', '#mapquiz'],
+  },
+  {
+    name: 'Lowest %',
+    intro: () => ['What % did you need? 🤔', '', 'Lowest % in the comments wins 🏆'],
+    spoiler: 'The answers ⬇️',
+    tags: ['#geographychallenge', '#maps'],
+  },
+  {
+    name: 'Shape only',
+    intro: () => ['Just the shape. No map, no names. 🧠', '', 'How many did you get? 👇'],
+    spoiler: 'Check yourself ⬇️',
+    tags: ['#countryshapes', '#geographyquiz'],
+  },
+  {
+    name: 'Instant',
+    intro: () => ['Real map nerds get these at 20% 😏', '', 'Comment your score 👇'],
+    spoiler: 'Answers (no cheating!) ⬇️',
+    tags: ['#mapnerd', '#guessthecountry'],
+  },
+  {
+    name: 'Gets harder',
+    intro: () => ['Starts easy, ends evil 😈 Can you name them before 100%?', '', 'Tag a friend to compare 👯'],
+    spoiler: 'All answers ⬇️',
+    tags: ['#quiztime', '#mapquiz'],
+  },
+  {
+    name: 'Daily outline',
+    intro: ({rounds}) => [`Daily outline challenge — ${rounds} countries ✏️`, '', 'Follow for a new one every day 🌍'],
+    spoiler: "Today's answers ⬇️",
+    tags: ['#dailyquiz', '#geography'],
+  },
+];
+
+export const VERSUS_STYLES: Style[] = [
+  {
+    name: 'Trust your gut',
+    intro: ({rounds}) => [`🤔 ${rounds} match-ups. Trust your gut — or the map?`, '', 'Comment your score 👇'],
+    spoiler: 'Answers below ⬇️',
+    tags: ['#geographyquiz', '#maps'],
+  },
+  {
+    name: 'Maps lie',
+    intro: () => ['Maps lie 🗺️ (thanks, Mercator) — so which is bigger?', '', 'How many did you get right? 👇'],
+    spoiler: 'The answers ⬇️',
+    tags: ['#mercator', '#mapnerd'],
+  },
+  {
+    name: 'Everyone gets #1 wrong',
+    intro: () => ['Almost everyone gets the first one wrong 😅', '', 'Did you? Tell me 👇'],
+    spoiler: 'Check yourself ⬇️',
+    tags: ['#geographychallenge', '#didyouknow'],
+  },
+  {
+    name: 'A or B',
+    intro: ({seconds}) => [`Top or bottom? ${seconds} seconds each ⏱️`, '', 'Write your answers: T/B/T/B… 👇'],
+    spoiler: 'Answers (no cheating!) ⬇️',
+    tags: ['#quiztime', '#geography'],
+  },
+  {
+    name: 'Mind blown',
+    intro: () => ['These comparisons will mess with your head 🤯', '', 'Which one surprised you most? 👇'],
+    spoiler: 'All answers ⬇️',
+    tags: ['#mindblown', '#maps'],
+  },
+  {
+    name: 'Tag a friend',
+    intro: ({rounds}) => [`Bigger or smaller? ${rounds} rounds 🌍`, '', 'Tag a friend who thinks they know maps 👯'],
+    spoiler: 'Answers ⬇️',
+    tags: ['#geographyquiz', '#travel'],
+  },
+];
+
 /** Caption styles available for a format. */
 export const captionStyles = (format: VideoFormat | undefined): Style[] =>
-  format === 'rapid' ? RAPID_STYLES : format === 'pan' ? PAN_STYLES : format === 'spot' ? SPOT_STYLES : CAPTION_STYLES;
+  format === 'rapid'
+    ? RAPID_STYLES
+    : format === 'pan'
+      ? PAN_STYLES
+      : format === 'spot'
+        ? SPOT_STYLES
+        : format === 'outline'
+          ? OUTLINE_STYLES
+          : format === 'versus'
+            ? VERSUS_STYLES
+            : CAPTION_STYLES;
 
 /** Style used when the project has none saved: varies with the seed so posts don't all look the same. */
 export const defaultCaptionStyle = (props: Pick<VideoProps, 'seed' | 'format'>) =>
@@ -225,33 +314,51 @@ export const defaultCaptionStyle = (props: Pick<VideoProps, 'seed' | 'format'>) 
  * Post text (English) for the reel. Instagram/Facebook have no spoiler markup, so the answer
  * is pushed below the "…more" fold with dot lines and doesn't spoil the video in the feed.
  */
+/** Multi-round formats: thinking time + one answer line per round (null for classic / pan). */
+function multiRound(props: VideoProps): {seconds: number; answers: string[]} | null {
+  switch (props.format) {
+    case 'rapid':
+      return {
+        seconds: props.rapid?.seconds ?? 3,
+        answers: (props.rapid?.rounds ?? []).map((r) => (r.kind === 'country' ? countryLabel(r.country) : r.answer || '?')),
+      };
+    case 'spot':
+      return {seconds: props.spot?.seconds ?? 6, answers: (props.spot?.rounds ?? []).map((r) => `${countryLabel(r.country)} (×${r.scale} bigger)`)};
+    case 'outline':
+      return {seconds: props.outline?.seconds ?? 5, answers: (props.outline?.rounds ?? []).map((r) => countryLabel(r.country))};
+    case 'versus':
+      return {seconds: props.versus?.seconds ?? 5, answers: versusPlan(props).map(versusAnswer)};
+    default:
+      return null;
+  }
+}
+
+/**
+ * Post text (English) for the reel. Instagram/Facebook have no spoiler markup, so the answer
+ * is pushed below the "…more" fold with dot lines and doesn't spoil the video in the feed.
+ */
 export function buildCaption(props: VideoProps, styleIndex = props.captionStyle ?? defaultCaptionStyle(props)): string {
   const styles = captionStyles(props.format);
   const style = styles[((styleIndex % styles.length) + styles.length) % styles.length];
   const {place} = props;
-  const rapid = props.format === 'rapid';
-  const spot = props.format === 'spot';
+  const multi = multiRound(props);
   const tags = ['#geography', '#geoguessr', '#travel', '#guesstheplace', '#quiz', ...style.tags];
-  if (!rapid && !spot) {
+  if (!multi) {
     if (place.country) tags.push(tag(place.country));
     if (place.name && place.name !== place.country) tags.push(tag(place.name));
   }
 
-  const rounds = props.rapid?.rounds ?? [];
-  const spotRounds = props.spot?.rounds ?? [];
   const intro = style.intro({
-    seconds: rapid ? props.rapid?.seconds ?? 3 : spot ? props.spot?.seconds ?? 6 : props.thinkSeconds,
+    seconds: multi ? multi.seconds : props.thinkSeconds,
     cta: props.texts.cta.trim(),
-    rounds: spot ? spotRounds.length : rounds.length,
+    rounds: multi?.answers.length ?? 3,
   });
   while (intro.length && !intro[intro.length - 1]) intro.pop(); // empty ending question
   // "Ep. 12" rather than "#12", which Instagram would turn into a hashtag
   if (props.episode && intro.length) intro[0] = `Ep. ${props.episode} · ${intro[0]}`;
 
-  const answer = spot
-    ? spotRounds.map((r, i) => `${i + 1}. ${countryLabel(r.country)} (×${r.scale} bigger)`)
-    : rapid
-    ? rounds.map((r, i) => `${i + 1}. ${r.kind === 'country' ? countryLabel(r.country) : r.answer || '?'}`)
+  const answer = multi
+    ? multi.answers.map((a, i) => `${i + 1}. ${a}`)
     : [`✅ ${place.name}${place.country && place.country !== place.name ? `, ${place.country}` : ''}`];
 
   return [...intro, '', style.spoiler, '.', '.', '.', '.', '.', ...answer, ...credits(props), '', [...new Set(tags)].join(' ')].join('\n');

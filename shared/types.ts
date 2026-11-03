@@ -44,8 +44,27 @@ export type MusicTrack = {
  *   rapid   — 5–10 quick rounds, one country (highlighted on the map) or photo each
  *   pan     — one photo slowly panned, "Do you know this city?", optional answer at the end
  *   spot    — "What's wrong with this map?": one country per round is drawn bigger than it is
+ *   outline — "Guess before 100%": a country's outline is drawn bit by bit, name it before it's finished
+ *   versus  — "Which is bigger?" / "Which is farther north?": two countries, pick one
  */
-export type VideoFormat = 'classic' | 'rapid' | 'pan' | 'spot';
+export type VideoFormat = 'classic' | 'rapid' | 'pan' | 'spot' | 'outline' | 'versus';
+
+export type OutlineConfig = {
+  title: string;
+  /** How long the outline takes to draw (= thinking time) */
+  seconds: number;
+  difficulty: 'mixed' | 'easy' | 'medium' | 'hard';
+  /** world-atlas country names */
+  rounds: {country: string}[];
+};
+
+export type VersusQuestion = 'bigger' | 'north';
+export type VersusRound = {question: VersusQuestion; a: string; b: string};
+export type VersusConfig = {
+  title: string;
+  seconds: number;
+  rounds: VersusRound[];
+};
 
 export type SpotRound = {
   /** id from SPOT_AREAS (shared/spot.ts) */
@@ -95,6 +114,8 @@ export type VideoProps = {
   rapid?: RapidConfig;
   pan?: PanConfig;
   spot?: SpotConfig;
+  outline?: OutlineConfig;
+  versus?: VersusConfig;
   photos: [PhotoSlot, PhotoSlot, PhotoSlot];
   place: Place;
   /** Round-3 wrong answers. Missing/empty entries are auto-picked from the city list. */

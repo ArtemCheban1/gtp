@@ -11,6 +11,8 @@ type Props = {
   props: VideoProps;
   plan: Plan;
   update: (patch: Partial<VideoProps>) => void;
+  /** New content was generated/picked — the app may give the video a fresh look */
+  onNewContent?: () => void;
 };
 
 const norm = (s: string) =>
@@ -19,7 +21,7 @@ const norm = (s: string) =>
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase();
 
-export const PlacePicker: React.FC<Props> = ({props, plan, update}) => {
+export const PlacePicker: React.FC<Props> = ({props, plan, update, onNewContent}) => {
   const [query, setQuery] = useState('');
   const [web, setWeb] = useState<GeoResult[]>([]);
   const [busy, setBusy] = useState(false);
@@ -35,6 +37,7 @@ export const PlacePicker: React.FC<Props> = ({props, plan, update}) => {
   const choose = (p: Place) => {
     // a new answer → forget the manual region and old decoys
     update({place: {name: p.name, country: p.country, lat: p.lat, lon: p.lon}, decoys: []});
+    onNewContent?.();
     setQuery('');
     setWeb([]);
   };
@@ -56,6 +59,7 @@ export const PlacePicker: React.FC<Props> = ({props, plan, update}) => {
     const country = resolvePoint([lon, lat])?.country;
     // keep a typed-in name; a click picks a new spot, so the old decoys may no longer fit
     update({place: {...place, lat, lon, country: country ?? place.country, subId: undefined}, decoys: []});
+    onNewContent?.();
   };
 
   const detected = 'error' in plan ? null : {zone: zoneById(plan.zoneId)!, sub: subById(plan.subId)!};

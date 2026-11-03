@@ -6,6 +6,7 @@ import {spotPlan} from '../shared/spot';
 import {HEIGHT, WIDTH} from '../shared/timeline';
 import type {VideoProps} from '../shared/types';
 import {MapView} from './components/MapView';
+import {CountryShape} from './components/CountryShape';
 import {SpotMap} from './components/SpotMap';
 import {ThemeProvider, fontFamily, themeFor, useTheme} from './theme';
 
@@ -37,6 +38,22 @@ function coverContent(video: VideoProps) {
       badge: `${video.spot?.rounds.length ?? 5} maps · spot it`,
     };
   }
+  if (video.format === 'outline') {
+    const first = video.outline?.rounds[0]?.country;
+    return {
+      outline: first,
+      title: (video.outline?.title || 'Guess before 100%').toUpperCase(),
+      badge: `${video.outline?.rounds.length ?? 5} countries`,
+    };
+  }
+  if (video.format === 'versus') {
+    const r = video.versus?.rounds[0];
+    return {
+      versus: r ? ([r.a, r.b] as [string, string]) : undefined,
+      title: (video.versus?.title || 'Which is bigger?').toUpperCase(),
+      badge: `${video.versus?.rounds.length ?? 5} rounds`,
+    };
+  }
   if (video.format === 'pan') {
     return {photo: video.photos[0], title: (video.pan?.question || 'Do you know this city?').toUpperCase(), badge: 'Comment 👇'};
   }
@@ -44,7 +61,7 @@ function coverContent(video: VideoProps) {
 }
 
 const CoverFrame: React.FC<VideoProps> = (video) => {
-  const {COLORS} = useTheme();
+  const {COLORS, OPTION_COLORS} = useTheme();
   const c = coverContent(video);
   const photo = 'photo' in c ? c.photo : undefined;
   const src = photo?.src;
@@ -67,6 +84,18 @@ const CoverFrame: React.FC<VideoProps> = (video) => {
           highlight={0}
           frame={0}
         />
+      ) : null}
+      {'outline' in c && c.outline ? (
+        <div style={{position: 'absolute', left: 90, top: 560, width: 900, height: 720}}>
+          <CountryShape country={c.outline} width={900} height={720} progress={0.62} color={COLORS.accent} strokeWidth={10} padding={30} />
+        </div>
+      ) : null}
+      {'versus' in c && c.versus ? (
+        <div style={{position: 'absolute', left: 40, right: 40, top: 640, height: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+          <CountryShape country={c.versus[0]} width={440} height={560} fill={0.9} color={OPTION_COLORS.A} padding={20} />
+          <div style={{fontSize: 110, fontWeight: 900, color: COLORS.accent, textShadow: '0 8px 30px rgba(0,0,0,0.6)'}}>VS</div>
+          <CountryShape country={c.versus[1]} width={440} height={560} fill={0.9} color={OPTION_COLORS.B} padding={20} />
+        </div>
       ) : null}
       {!src && 'map' in c && c.map ? (
         <MapView camera={cameraForBox(c.map.view, WIDTH, HEIGHT, 0.8)} width={WIDTH} height={HEIGHT} round={c.map.spec} reveal={0} frame={0} labelsOpacity={0} />

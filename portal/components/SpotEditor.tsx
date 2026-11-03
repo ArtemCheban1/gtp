@@ -6,17 +6,22 @@ import type {SpotConfig, SpotRound, VideoProps} from '../../shared/types';
 type Props = {
   props: VideoProps;
   update: (patch: Partial<VideoProps>) => void;
+  /** New content was generated/picked — the app may give the video a fresh look */
+  onNewContent?: () => void;
 };
 
 const SCALES = [1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8];
 
 /** "What's wrong with this map?": one enlarged country per map, picked automatically, editable per round. */
-export const SpotEditor: React.FC<Props> = ({props, update}) => {
+export const SpotEditor: React.FC<Props> = ({props, update, onNewContent}) => {
   const cfg = props.spot ?? defaultSpot(props.seed);
   const set = (patch: Partial<SpotConfig>) => update({spot: {...cfg, ...patch}});
   const setRound = (i: number, patch: Partial<SpotRound>) => set({rounds: cfg.rounds.map((r, j) => (j === i ? {...r, ...patch} : r))});
 
-  const reroll = (count = cfg.rounds.length, seed = props.seed + 1) => update({seed, spot: {...cfg, rounds: pickSpotRounds(seed, count)}});
+  const reroll = (count = cfg.rounds.length, seed = props.seed + 1) => {
+    update({seed, spot: {...cfg, rounds: pickSpotRounds(seed, count)}});
+    onNewContent?.();
+  };
   const move = (i: number, d: number) => {
     const rounds = [...cfg.rounds];
     [rounds[i], rounds[i + d]] = [rounds[i + d], rounds[i]];

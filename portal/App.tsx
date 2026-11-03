@@ -1,10 +1,12 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {Player} from '@remotion/player';
 import {GuessThePlace} from '../remotion/GuessThePlace';
 import {DEFAULT_PROPS} from '../shared/defaults';
 import {buildPlan} from '../shared/rounds';
 import {defaultRapid} from '../shared/rapid';
+import {defaultOutline} from '../shared/outline';
 import {defaultSpot} from '../shared/spot';
+import {defaultVersus} from '../shared/versus';
 import {FPS, HEIGHT, WIDTH, videoFrames} from '../shared/timeline';
 import type {VideoFormat, VideoProps} from '../shared/types';
 import {CaptionPanel} from './components/CaptionPanel';
@@ -19,7 +21,11 @@ import {RapidEditor, rapidPhotoTargets, withRapidPhoto} from './components/Rapid
 import {RenderPanel} from './components/RenderPanel';
 import {SettingsPanel} from './components/SettingsPanel';
 import {SpotEditor} from './components/SpotEditor';
+import {OutlineEditor} from './components/OutlineEditor';
+import {VersusEditor} from './components/VersusEditor';
 import {VoicePanel} from './components/VoicePanel';
+import {type MusicTrack, listMusic} from './api';
+import {loadAutoLook, randomLook, saveAutoLook} from './look';
 
 const DRAFT_KEY = 'gtp:draft';
 
@@ -28,6 +34,8 @@ const FORMATS: {id: VideoFormat; name: string; hint: string}[] = [
   {id: 'rapid', name: 'Rapid', hint: '5–10 quick rounds: name the country on the map (or a photo)'},
   {id: 'pan', name: 'City pan', hint: 'One photo slowly panned: “Do you know this city?”'},
   {id: 'spot', name: "What's wrong?", hint: 'One country per map is drawn too big — spot it before the timer ends'},
+  {id: 'outline', name: 'Before 100%', hint: 'A country outline draws itself — name it before it is complete'},
+  {id: 'versus', name: 'Which is bigger?', hint: 'Two countries: which is bigger / farther north? Tricky pairs picked automatically'},
 ];
 
 /** Why this project can't be rendered yet (null = ready). */
@@ -40,6 +48,8 @@ function formatError(props: VideoProps, classicPlanError: string | null): string
   }
   if (props.format === 'pan') return props.place.name.trim() ? null : 'Pick the place first';
   if (props.format === 'spot') return props.spot?.rounds.length ? null : 'Add some maps';
+  if (props.format === 'outline') return props.outline?.rounds.length ? null : 'Add some countries';
+  if (props.format === 'versus') return props.versus?.rounds.length ? null : 'Add some match-ups';
   return classicPlanError;
 }
 
@@ -56,6 +66,26 @@ function loadDraft(): VideoProps {
 export const App: React.FC = () => {
   const [props, setProps] = useState<VideoProps>(loadDraft);
   const update = (patch: Partial<VideoProps>) => setProps((p) => ({...p, ...patch}));
+
+  // Music library + "new look" (random theme / caption style / track) for every new place or new set
+  const [library, setLibrary] = useState<MusicTrack[]>([]);
+  const refreshLibrary = useCallback(() => {
+    listMusic()
+      .then(setLibrary)
+      .catch(() => setLibrary([]));
+  }, []);
+  useEffect(refreshLibrary, [refreshLibrary]);
+  const [autoLook, setAutoLookState] = useState(loadAutoLook);
+  const setAutoLook = (on: boolean) => {
+    setAutoLookState(on);
+    saveAutoLook(on);
+  };
+  const urls = library.map((t) => t.url);
+  const shuffleLook = () => setProps((p) => ({...p, ...randomLook(p, urls)}));
+  /** Editors call this after new content (new place, new countries, new maps) */
+  const newContent = () => {
+    if (autoLook) shuffleLook();
+  };
 
   useEffect(() => {
     try {
@@ -75,6 +105,8 @@ export const App: React.FC = () => {
       rapid: f === 'rapid' ? props.rapid ?? defaultRapid(props.seed) : props.rapid,
       pan: f === 'pan' ? props.pan ?? DEFAULT_PAN : props.pan,
       spot: f === 'spot' ? props.spot ?? defaultSpot(props.seed) : props.spot,
+      outline: f === 'outline' ? props.outline ?? defaultOutline(props.seed) : props.outline,
+      versus: f === 'versus' ? props.versus ?? defaultVersus(props.seed) : props.versus,
     });
   const photoTargets = format === 'rapid' ? rapidPhotoTargets(props.rapid) : null;
 
@@ -84,7 +116,25 @@ export const App: React.FC = () => {
         <h1>
           Guess the <span>Place</span> <small>reel studio</small>
         </h1>
-        <ProjectBar props={props} onLoad={setProps} onNew={() => setProps({...DEFAULT_PROPS, seed: Date.now() % 100000})} />
+        <ProjectBar
+          props={props}
+          onLoad={setProps}
+          onNew={() =>
+            setProps((p) => {
+              const fresh: VideoProps = {...DEFAULT_PROPS, format: p.format, seed: Date.now() % 100000};
+              const withFormat: VideoProps = {
+                ...fresh,
+                rapid: fresh.format === 'rapid' ? defaultRapid(fresh.seed) : undefined,
+                pan: fresh.format === 'pan' ? DEFAULT_PAN : undefined,
+                spot: fresh.format === 'spot' ? defaultSpot(fresh.seed) : undefined,
+                outline: fresh.format === 'outline' ? defaultOutline(fresh.seed) : undefined,
+                versus: fresh.format === 'versus' ? defaultVersus(fresh.seed) : undefined,
+                music: p.music,
+              };
+              return autoLook ? {...withFormat, ...randomLook(withFormat, urls)} : withFormat;
+            })
+          }
+        />
       </header>
 
       <main className="layout">
@@ -101,10 +151,14 @@ export const App: React.FC = () => {
           </section>
 
           {format === 'spot' ? (
-            <SpotEditor props={props} update={update} />
+            <SpotEditor props={props} update={update} onNewContent={newContent} />
+          ) : format === 'outline' ? (
+            <OutlineEditor props={props} update={update} onNewContent={newContent} />
+          ) : format === 'versus' ? (
+            <VersusEditor props={props} update={update} onNewContent={newContent} />
           ) : format === 'rapid' ? (
             <>
-              <RapidEditor props={props} update={update} />
+              <RapidEditor props={props} update={update} onNewContent={newContent} />
               {photoTargets?.length ? (
                 <PhotoFinder
                   place={props.place}
@@ -115,7 +169,7 @@ export const App: React.FC = () => {
             </>
           ) : (
             <>
-              <PlacePicker props={props} plan={plan} update={update} />
+              <PlacePicker props={props} plan={plan} update={update} onNewContent={newContent} />
               <PhotoSlots
                 photos={props.photos}
                 count={format === 'pan' ? 1 : 3}
@@ -132,7 +186,15 @@ export const App: React.FC = () => {
           )}
           {format === 'classic' ? <DecoyEditor props={props} plan={plan} update={update} /> : null}
           {format === 'pan' ? <PanEditor props={props} update={update} /> : null}
-          <SettingsPanel props={props} update={update} />
+          <SettingsPanel
+            props={props}
+            update={update}
+            library={library}
+            onLibraryChange={refreshLibrary}
+            autoLook={autoLook}
+            setAutoLook={setAutoLook}
+            shuffleLook={shuffleLook}
+          />
           {format === 'classic' ? <VoicePanel props={props} plan={plan} update={update} /> : null}
           <QueuePanel />
         </div>

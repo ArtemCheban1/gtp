@@ -1,14 +1,22 @@
 import React, {useState} from 'react';
 import type {VideoProps} from '../../shared/types';
 import {THEMES, DEFAULT_THEME} from '../../remotion/theme';
-import {uploadFile} from '../api';
+import {type MusicTrack, uploadFile} from '../api';
 
 type Props = {
   props: VideoProps;
   update: (patch: Partial<VideoProps>) => void;
+  /** Uploaded tracks to choose from */
+  library: MusicTrack[];
+  /** Called after a new track was uploaded (refreshes the library) */
+  onLibraryChange: () => void;
+  autoLook: boolean;
+  setAutoLook: (on: boolean) => void;
+  /** New random theme + caption style + track now */
+  shuffleLook: () => void;
 };
 
-export const SettingsPanel: React.FC<Props> = ({props, update}) => {
+export const SettingsPanel: React.FC<Props> = ({props, update, library, onLibraryChange, autoLook, setAutoLook, shuffleLook}) => {
   const [busy, setBusy] = useState(false);
   const classic = !props.format || props.format === 'classic';
   const setText = (k: keyof VideoProps['texts'], v: string) => update({texts: {...props.texts, [k]: v}});
@@ -18,6 +26,7 @@ export const SettingsPanel: React.FC<Props> = ({props, update}) => {
     setBusy(true);
     try {
       update({music: {src: await uploadFile(file), volume: props.music?.volume ?? 0.35}});
+      onLibraryChange();
     } finally {
       setBusy(false);
     }
@@ -27,6 +36,13 @@ export const SettingsPanel: React.FC<Props> = ({props, update}) => {
     <section className="card">
       <h2>{classic || props.format === 'pan' ? '4' : '2'} · {classic ? 'Timing, sound & text' : 'Sound, look & text'}</h2>
       <div className="grid2">
+        <div className="span2 look">
+          <label className="check">
+            <input type="checkbox" checked={autoLook} onChange={(e) => setAutoLook(e.target.checked)} /> 🎲 New look for every new place / new
+            countries / new maps (random theme, caption style and music track)
+          </label>
+          <button onClick={shuffleLook}>🎲 Shuffle look now</button>
+        </div>
         {props.format === 'pan' ? null : (
           <label className="check span2">
             <input type="checkbox" checked={!!props.intro} onChange={(e) => update({intro: e.target.checked})} /> Start with a title card (off is
@@ -77,14 +93,25 @@ export const SettingsPanel: React.FC<Props> = ({props, update}) => {
           </select>
         </label>
         <label>
-          Background music (your own royalty-free track)
-          <input type="file" accept="audio/*" onChange={(e) => uploadMusic(e.target.files?.[0])} disabled={busy} />
-          {props.music ? (
-            <span className="row tight">
-              <small>{props.music.src.split('/').pop()}</small>
-              <button onClick={() => update({music: null})}>Remove</button>
-            </span>
-          ) : null}
+          Background music (your own royalty-free tracks)
+          <select
+            value={props.music?.src ?? ''}
+            onChange={(e) => update({music: e.target.value ? {src: e.target.value, volume: props.music?.volume ?? 0.35} : null})}
+          >
+            <option value="">No music</option>
+            {props.music && !library.some((t) => t.url === props.music!.src) ? (
+              <option value={props.music.src}>{props.music.src.split('/').pop()}</option>
+            ) : null}
+            {library.map((t) => (
+              <option key={t.url} value={t.url}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <span className="row tight">
+            <small>Add a track:</small>
+            <input type="file" accept="audio/*" onChange={(e) => uploadMusic(e.target.files?.[0])} disabled={busy} />
+          </span>
         </label>
         <label>
           Music volume: <b>{Math.round((props.music?.volume ?? 0) * 100)}%</b>

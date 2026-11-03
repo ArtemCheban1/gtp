@@ -74,3 +74,6 @@ export const importPhoto = async (url: string) =>
   json<{url: string}>(
     await fetch('/api/photos/import', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({url})}),
   );
+
+export type MusicTrack = {url: string; name: string; time: number};
+export const listMusic = async () => json<MusicTrack[]>(await fetch('/api/music'));

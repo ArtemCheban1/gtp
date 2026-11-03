@@ -51,6 +51,20 @@ export const spotRoundFrames = (p: SpotTiming) => ST.enter + spotThink(p) + ST.r
 export const spotRoundStart = (p: SpotTiming, i: number) => (p.intro ? RT.intro : 0) + i * spotRoundFrames(p);
 export const spotOutroStart = (p: SpotTiming) => spotRoundStart(p, p.spot?.rounds.length ?? 0);
 
+// ── "Guess before 100%" (outline) and "Which is bigger?" (versus) ──
+export const OT = {enter: 6, reveal: 60, outro: 120};
+export const VT = {enter: 10, reveal: 54, outro: 120};
+type CfgTiming = {seconds: number; rounds: unknown[]} | undefined;
+const think = (cfg: CfgTiming, fallback: number) => Math.round((cfg?.seconds ?? fallback) * FPS);
+export const outlineThink = (p: {outline?: CfgTiming}) => think(p.outline, 5);
+export const outlineRoundFrames = (p: {outline?: CfgTiming}) => OT.enter + outlineThink(p) + OT.reveal;
+export const outlineRoundStart = (p: {intro?: boolean; outline?: CfgTiming}, i: number) => (p.intro ? RT.intro : 0) + i * outlineRoundFrames(p);
+export const outlineOutroStart = (p: {intro?: boolean; outline?: CfgTiming}) => outlineRoundStart(p, p.outline?.rounds.length ?? 0);
+export const versusThink = (p: {versus?: CfgTiming}) => think(p.versus, 5);
+export const versusRoundFrames = (p: {versus?: CfgTiming}) => VT.enter + versusThink(p) + VT.reveal;
+export const versusRoundStart = (p: {intro?: boolean; versus?: CfgTiming}, i: number) => (p.intro ? RT.intro : 0) + i * versusRoundFrames(p);
+export const versusOutroStart = (p: {intro?: boolean; versus?: CfgTiming}) => versusRoundStart(p, p.versus?.rounds.length ?? 0);
+
 // ── Pan format ──
 /** How long the answer stays on screen at the end of a pan */
 export const PAN_REVEAL = 45;
@@ -61,5 +75,7 @@ export function videoFrames(p: VideoProps): number {
   if (p.format === 'rapid') return rapidOutroStart(p) + RT.outro;
   if (p.format === 'pan') return panFrames(p);
   if (p.format === 'spot') return spotOutroStart(p) + ST.outro;
+  if (p.format === 'outline') return outlineOutroStart(p) + OT.outro;
+  if (p.format === 'versus') return versusOutroStart(p) + VT.outro;
   return totalFrames(p);
 }

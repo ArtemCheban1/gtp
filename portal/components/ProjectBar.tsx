@@ -25,6 +25,8 @@ export const ProjectBar: React.FC<Props> = ({props, onLoad, onNew}) => {
           ? `${props.rapid?.title || 'Guess the Country'}${props.episode ? ` ${props.episode}` : ''}`
           : props.format === 'spot'
             ? `${props.spot?.title || "What's wrong with this map"}${props.episode ? ` ${props.episode}` : ''}`
+            : props.format === 'outline' || props.format === 'versus'
+            ? `${(props.format === 'outline' ? props.outline?.title : props.versus?.title) || props.format}${props.episode ? ` ${props.episode}` : ''}`
             : `${props.place.name}${props.format === 'pan' ? ' pan' : ''}`;
       const {id} = await saveProject(name, props);
       setMsg(`Saved as "${id}"`);

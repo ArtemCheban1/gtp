@@ -48,6 +48,36 @@ export const THEMES = {
     colors: {...COMMON, bg: '#0D1B2A', bg2: '#1B3A52', ocean: '#2B5D7D', oceanDeep: '#1F4A66', land: '#8DA2B5', landFocus: '#FFFFFF', accent: '#5EEBFF'},
     options: BASE_OPTIONS,
   },
+  ocean: {
+    name: 'Ocean',
+    colors: {...COMMON, bg: '#04161C', bg2: '#0A2D36', ocean: '#0E4A57', oceanDeep: '#093A45', land: '#4F6E73', landFocus: '#EAF4EE', accent: '#2EE6C5', correct: '#7CFF6B'},
+    options: {A: '#FF6B6B', B: '#4D96FF', C: '#FFD93D', D: '#C77DFF'},
+  },
+  desert: {
+    name: 'Desert',
+    colors: {...COMMON, bg: '#1F1309', bg2: '#3A2412', ocean: '#2E3F52', oceanDeep: '#223142', land: '#8A6F55', landFocus: '#F6E2BE', accent: '#FFB347'},
+    options: {A: '#E4572E', B: '#2E86AB', C: '#F3A712', D: '#29BF12'},
+  },
+  neon: {
+    name: 'Neon',
+    colors: {...COMMON, bg: '#0B0716', bg2: '#1C1033', ocean: '#1A1440', oceanDeep: '#120D2E', land: '#4B4470', landFocus: '#E6E1FF', accent: '#FF3CAC', correct: '#39FF88'},
+    options: {A: '#FF3CAC', B: '#00D4FF', C: '#FFE600', D: '#7CFF4F'},
+  },
+  cherry: {
+    name: 'Cherry',
+    colors: {...COMMON, bg: '#1A0709', bg2: '#360D14', ocean: '#2B2033', oceanDeep: '#1F1626', land: '#6E4D55', landFocus: '#FBE7E2', accent: '#FF5D73'},
+    options: {A: '#FF5D73', B: '#4EA8DE', C: '#FFC857', D: '#5ED89A'},
+  },
+  mint: {
+    name: 'Mint',
+    colors: {...COMMON, bg: '#071A16', bg2: '#0E3029', ocean: '#164B4F', oceanDeep: '#0F393D', land: '#5A7A6E', landFocus: '#F0FAF2', accent: '#8CFFB4', correct: '#E9FF70'},
+    options: {A: '#FF7A59', B: '#59A5FF', C: '#FFD166', D: '#B388FF'},
+  },
+  royal: {
+    name: 'Royal',
+    colors: {...COMMON, bg: '#0C0A24', bg2: '#1D1848', ocean: '#252063', oceanDeep: '#1A1650', land: '#5D5888', landFocus: '#F3EEDD', accent: '#F5C542'},
+    options: {A: '#FF5E78', B: '#4CC9F0', C: '#F5C542', D: '#5BE584'},
+  },
 } satisfies Record<string, Theme>;
 
 export type ThemeId = keyof typeof THEMES;
